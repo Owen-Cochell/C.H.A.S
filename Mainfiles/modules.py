@@ -5,14 +5,6 @@ import time
 import os
 import platform
 
-class serverinfo:
-
-    def __init__(self, ip, hostname, typec):
-        self.ip = ip
-        self.hostname = hostname
-        self.typec = typec
-        return
-
 def startup():
     print("        ______  __  __  ___     _____")
     print("       / ____/ / / / / /   |   / ___/")
@@ -22,65 +14,90 @@ def startup():
     print(" Computerized Home Automation System ver 1.0.0")
     return
 
-def syscheck(servers):
-    through=0
-    servn = servers.get('servn')
+def syscheck(servers, serversip, serversph, servstat):
     pingstat = None
     print("Checking connectivity to remote servers:")
     print("\n+==============================+")
     print("CHECKING THESE SYSTEMS:         ")
-    print("{serv0}                         ".format(**servers))
-    print("{serv0ph}                        ".format(**servers))
-    print("{serv1}                         ".format(**servers))
-    print("{serv1ph}                        ".format(**servers))
+    for i in range(len(servers)):
+        tempserv = servers[i]
+        tempph = serversph[i]
+        print(tempserv)
+        print(tempph)
     print("+==============================+")
-    for x in str(servn):
+    for i in range(len(servers)):
         print("\n#############################################")
-        actserv = servers.get('serv0'.format(x))
-        actip = servers.get('serv0p'.format(x))
-        if through==1:
-            actserv = servers.get('serv1'.format(x))
-            actip = servers.get('serv1p'.format(x))
+        actserv = servers[i]
+        actip = serversip[i]
         print("Testing PING for: {}\nI.P Adress: {}\nType of connection: PING".format(actserv, actip))
         pingstat = os.system("ping " + ("-n 1 " if  platform.system().lower()=="windows" else "-c 1 ") + actip)
         if pingstat == 0:
+            servstat.update( {actserv : 'UP' } )
             print("Host {}(I.P: {}) is UP!".format(actserv, actip))
         elif pingstat != None:
             print("Host {}(I.P: {}) is DOWN!\nDiagnossing...".format(actserv, actip))
             time.sleep(2)
-            pingdiag(actserv, actip)
-        through=1
+            pingdiag(actserv, actip, servstat)
     return    
                                 
-def pingdiag(actserv, actip):
+def pingdiag(actserv, actip, servstat):
     pingstat = None
-    print("\nAttempting to try again(This time with more packets!)...")
+    print("\nAttempting to try again(This time with more packets!)...\n")
     print("Testing PING for: {}\nI.P Adress: {}\nType of connection: PING".format(actserv, actip))
     pingstat = os.system("ping " + ("-n 4 " if  platform.system().lower()=="windows" else "-c 4 ") + actip)
     if pingstat == 0:
-        print("Host {}(I.P: {}) Is up!".format(actserv, actip))
-        print("Must have been a false alarm...\nContinueing!!!!!")
+        servstat.update( {actserv : 'UP' } )
+        print("\nHost {}(I.P: {}) Is up!".format(actserv, actip))
+        print("Must have been a false alarm or slow connection...\nContinuing!!!!!")
+        time.sleep(0.5)
         return
     elif pingstat != None:
-        print("Failed to connect to {}(I.P: {}) A second time!".format(actserv, actip))
-        print("Might be a network error. Trying a genral PING test...")
+        print("\nFailed to connect to {}(I.P: {}) A second time!".format(actserv, actip))
+        print("Might be a network error. Trying a genral PING test...\n")
         print("Testing PING for: Google\nDomain: google.com\nType of connection: PING".format(actserv, actip))
         pingstat = os.system("ping " + ("-n 1 " if  platform.system().lower()=="windows" else "-c 4 ") + 'google.com')
         if pingstat == 0:
-            print("Host Google(Domain: google.com) is UP!")
+            servstat.update( {actserv : 'DOWN' } )
+            print("\n#############################################")
+            print("\nHost Google(Domain: google.com) is UP!")
             print("This is NOT a network error. Something is wrong with the receiving end(Host: {})".format(actserv))
             print("Check the ehternet cabel and router. Perhapps it got disconnected.")
-            print("Also, check the server itself. Maybe it is off.")
-            print("Continueing...")
+            print("Also, check the server itself. Maybe it is off, or not reciveing connections.")
+            print("Continuing...")
             time.sleep(4)
             return
         elif pingstat != None:
+            servstat.update( {actserv : 'DOWN' } )
+            print("\n#############################################")
             print("Host Google(Domain: google.com) is DOWN!")
             print("This means their is proabbly an issue with your wifi.")
             print("Check ALL cables, and check the router.")
             print("Be sure to check the system as well. Perhapps their is something wrong.")
-            print("Continuing...")
-            time.sleep(4)
+            print("This script will now close, as their is no need to keep checking if the wifi is down")
+            empty=input("Press any key to exit...")
             return
             
+def mainmenu():
+    startup()
+    print("\nWelcome to the C.H.A.S Mainframe!\nPlease Select an option:")
+    print("1. Display Info\n2. SSH into a server\n3. Open Home Config(NOT YET ACTIVE!)\n4. Exit and open a shell")
+    
             
+def status(servstat, servers, serversip, serversph):
+    print("Network Satus:")
+    for i in range(len(servers)):
+        actserv = servers[i]
+        actip = serversip[i]
+        actph = serversph[i]
+        tempstat = servstat.get(actserv)
+        print("\n+==============================+")
+        print("Hostanme: {}".format(actserv))
+        print("{}".format(actph))
+        print("I.P Address: {}".format(actip))
+        print("Server Status: {}".format(tempstat))
+        print("\n+==============================+")
+    return
+    
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    return
