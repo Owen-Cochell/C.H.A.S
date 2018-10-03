@@ -22,6 +22,7 @@ ssh = subprocess.Popen(["ssh", "%s" % actserv],
 
 servers = ['Melanie', 'Lola']
 serversip = ['10.0.0.3', '10.0.0.4']
+serversssh = ['Melanie', 'Lola']
 serversph = ['(She\'s One Cool Cat!)', '(She\'s One Smart Girl!)']
 servstatip = {}
 servstatssh = {}
