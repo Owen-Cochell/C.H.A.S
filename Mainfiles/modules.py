@@ -113,13 +113,13 @@ def status(servstatip, servstatssh, servers, serversip, serversph):
         actserv = servers[i]
         actip = serversip[i]
         actph = serversph[i]
-        tempstatpi = servstatip.get(actserv)
+        tempstatip = servstatip.get(actserv)
         tempstatssh = servstatssh.get(actserv)
         print("\n+==============================+")
         print("Hostanme: {}".format(actserv))
         print("{}".format(actph))
         print("I.P Address: {}".format(actip))
-        print("Server Status: {}".format(tempstat))
+        print("Server Status: {}".format(tempstatip))
         if tempstatssh != 'UP':
             print("Server SSH Status: DOWN\nDisplaying error:")
             print(tempstatssh)
