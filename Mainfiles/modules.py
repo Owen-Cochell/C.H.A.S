@@ -46,7 +46,7 @@ def syscheck(servers, serversip, serversph, servstatip, ssh, servstatssh):
        print("\n#############################################")
        actserv = servers[i]
        actip = serversip[i]
-       checkvar = servstat.get(actserv)
+       checkvar = servstatip.get(actserv)
        if checkvar == 'DOWN':
            print("ATTENTION:\n{} is currently DOWN({} failed the PING test) This script will be skipping the SSH test for {}.".format(actserv, actserv, actserv))
            continue
