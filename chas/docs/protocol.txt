@@ -1,0 +1,85 @@
+ --== CHAS Protocol: ==--
+
+ Message Architecture:
+
+ Proto-header - Header - Content
+
+ Content Architecture:
+
+ All CONTENT MUST BE ENCODED IN JSON FORMAT!
+
+ {id: Id of the operation requested
+ uuid: uuid of the device
+ content: actual content of the request}
+
+ ID's:
+
+ 0 - Connection maintenance
+    - ping/pong
+    - IP address change?
+
+ 1 - Authentication
+    - Initial authentication request
+    - Challenge?
+    - Authentication and conformation as well as other info(uuid)
+
+ 2 - Voice
+    - Requests containing info pertaining to the user's voice
+    - String containing voice from user
+    - Parsed through extensions, output is returned to device.
+
+ 3 - Extension Tools?
+    - Call extensions directly without needing to supply or return text
+    - Receive list of extensions from server/client.
+    - Call specific extension with information
+
+ 4 and up - Extension callable?
+
+    - Call extensions directly without needing to supply or return voice text
+    - ID will be 4+Extension number, and will send info to that extension.
+    - Instead of calling .match, .sock will be called instead
+    - False will be returned if their is no match
+    - True will be returned if their is a match
+    - Extensions are responsible for handling sending/receiving data using the device class.
+
+ Other Implementations:
+
+ Dynamic ID handler?:
+
+ End-users would be able to create files that allow for customisation of the id system.
+ Files would be placed in a configuration directory, which would also contain source code for handling these requests.
+
+ Directory architecture:
+
+ Root -+
+       |
+       +- Config files
+       |
+       +- Scripts -+
+                   |
+                   +- Script files(Organised by name/user?)
+
+ These configuration files will be parsed and indexed upon startup of the CHAS socket handler,
+ And may be reloaded at any time during the runtime of CHAS.
+
+ Configuration file architecture:
+
+ Files *should* be named after the id they are supporting(will not be enforced)
+ Indexing WILL be used to organise these, as it is faster and more organised
+
+ {id: id the handler will be using
+ path: Path to the file containing the ID handler}
+
+ Source code architecture:
+
+ Class that inherits IDHandle.py
+
+ Class contains method called 'handle' w/ the following parameters:
+
+    - Device - Device object pertaining to the device
+    - Content - JSON decoded content received by socket
+
+    May contain any code that the user desires.
+    MUST NOT RETURN ANYTHING!
+
+

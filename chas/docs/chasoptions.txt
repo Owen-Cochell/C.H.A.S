@@ -1,0 +1,96 @@
+--== CHAS Options formatting convention: ==--
+
+All options must follow the following format:
+
+{'name': [NAME HERE],
+'desc': [DESCRIPTION],
+'type': [TYPE OF OPTION],
+'value': [VALUE OF THE OPTION]}
+
+Option Types:
+
+
+1. Simple Selection: Simply select an option from the menu and exit
+2. Boolean Selection: Toggle an On/Off value for the option
+3. Value Selection: Select an option from a list of values
+4. Manual Selection: Manually enter a value for the option(Will automatically converted to a string)
+5. Null Selection: Do nothing when selected, great for menu placeholders
+6. Sub-menu selection
+
+Users will be prompted with a list of options, or the 'parent list'.
+Users can select options from this parent list, and OptionWindow will react diffrently depending on the options selected.
+
+If [1] is selected:
+
+CHAS will close the option window, and return that option selected as a string.
+
+If [2] is selected:
+
+CHAS will toggel this option to the opposite, and continue selecttion.
+
+If [3] is selected:
+
+CHAS will display another window with the necessary options to select. These will follow the same rules, and SHOULD be simple selection only.
+
+If [4] is selected:
+
+CHAS will display an input box for the user to enter input to. This will save any input as a string, so it is up to the application invocking 
+the option window to convert it to a format that it requires.
+
+If [5] is selected:
+
+Nothing happens and selection continues. This is meant to be a placeholder.
+
+if [6] is selected:
+
+A sub-menu will be opened using the values in the 'value' filed.
+
+Notice how option 1 is the only option type that exits. The user can exit by pressing 'e' or 'q', and can select the 'exit' button, which is present in all menus.
+
+Return Types:
+
+If the menu is a simple selection, then CHAS will return the name of the option selected.
+If we are working with advanced options, then CHAS will return a dictonary mapping the option to selection.
+
+If we are working with sub-menus, then CHAS will return the subvalue as a dictonary in the parent list.
+
+Controls and Keympas:
+
+Users can use the arrow keys to select options, and the keyboard to enter values in input boxes.
+Users MUST use enter to select an option.
+Users may select 'exit' at the bottom of every menu, or press 'q' or 'e' to exit.
+
+Display:
+
+CHAS will render the description of the highlighted option at the bottom of the window.
+CHAS will render the title of the menu at the top left of the screen. If a sub menu is used, then CHAS will make the title of that window the name of the sub menu option.
+
+Option parsing:
+
+CHAS will map the following value to options(is adding with add_options):
+
+If value is a list:
+
+CHAS will create a list of those values, marking them all as Simple Selection.
+The names of these options MUST be strings. CHAS will attempt to convert intigers to strings if necessary.
+The value does not matter, it will be ignored.
+
+For example, CHAS will create a Simple Selection list out of the following values:
+
+['Option 1', 'Option 2', 'Option 3']
+
+[1]: Option 1
+[2]: Option 3
+[3]: Option 4
+
+If the value is a list:
+
+CHAS will create a list out of the values provided.
+CHAS will create the following options out of the following values:
+
+String - Manual Selection
+List - Value Select
+Boolean - Toggle Select
+Dictonary - Sub menu
+None - Null Selection
+

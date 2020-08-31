@@ -1,0 +1,31 @@
+This file defines the procedure for specifying help menus, and associating commands with CHAS:
+
+Information regarding help information, command associating, and plugin metadata will be stored in the plugin.
+
+Plugins don't necessarily use commands, as CHAS needs to be be natural.
+This means that plugins are free to parse and interpret input in any way they see fit.
+
+However, it is necessary to include a system for defining usage and common commands used within plugins.
+
+All fields will be defined by the plugin.
+
+Metadata:
+
+Plugin metadata will be stored in the '__meta' parameter, and will be in dictionary format.
+
+Format:
+
+{'author': [AUTHOR NAME],
+'name': Plugin name}
+
+And others which will be defined later.m
+
+Help:
+
+Defines commands and displays help menu information on said command:
+
+[{[COMMAND NAME]: {'description': '', usage: ''}]
+
+CHAS also supports grouping, and will indent content based on grouping, like so:
+
+[{"Group 1": [{'command 1': 'This is a command']}]

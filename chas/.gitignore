@@ -1,0 +1,20 @@
+# Exclude .idea directorys
+**/.idea/
+
+# Exclude __pycache__ directories
+
+**/__pycache___/
+
+
+# Exclude .pyc files
+
+*.pyc
+
+# Exclude virtual environments
+
+**/venv
+/venv/
+
+# Exclude random log files
+
+log.txt
