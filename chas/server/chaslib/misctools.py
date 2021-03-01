@@ -3,35 +3,129 @@
 # This file contains misc. data for main script.
 # This file dose not contain code for Home Config or the chatbot
 
-import os
+import logging
+
 from concurrent.futures import ThreadPoolExecutor
 
-
-def banner(ver, name):
-
-    # Super cool banner
-
-    print("        ______  __  __  ___     _____")
-    print("       / ____/ / / / / /   |   / ___/")
-    print("      / /     / /_/ / / /| |   \__ \ ")
-    print("     / /____ / __  / / ___ |_ ___/ / ")
-    print("     \____(_)_/ /_(_)_/  |_(_)____/  ")
-    print("  Computerized Home Automation System")
-    print("            Version: {}".format(ver))
-    print("              {}".format(name))
-
-    return
+CHAS = None  # CHAS Masterclass
 
 
-def main_menu(ver, name):
+def get_chas():
 
-    # Main menu for C.H.A.S
+    """
+    Returns the CHAS masterclass for usage.
+    Great if you don't have access to the instantiated CHAS masterclass
 
-    banner(ver, name)
-    print("\nWelcome to the C.H.A.S Mainframe!\nPlease Select an option:")
-    print("[1]: Display Network Info\n[2]: SSH Into A Server\n[3]: Open Home Config(NOT YET ACTIVE!)"
-          "\n[4]: Open Chat System\n[5]: Display info\n[6]: Exit And Open A Shell")
-    return
+    :return: CHAS masterclass
+    :rtype: CHAS
+    """
+
+    return CHAS
+
+
+def set_chas(chas):
+
+    """
+    Sets the CHAS masterclass value.
+
+    :param chas: CHAS Masterclass value to set
+    :type chas: CHAS
+    """
+
+    global CHAS
+
+    CHAS = chas
+
+
+def get_logger(name):
+
+    """
+    Configures and returns a new logger using the specified name.
+
+    We add the following handlers to the logger:
+
+    FileHandler - Logs date, time, logger name, level
+    CHASLogHandler - Logs level
+
+    Each handler's level is specified using the values set in 'settings'py'.
+
+    :param name: Name of the logger to add
+    :type name: str
+    :return: Logger instance
+    :rtype: logging.Logger
+    """
+
+    # Configure the logger:
+
+    log = logging.getLogger(name)
+
+    # Set the logging level:
+
+    log.setLevel(logging.DEBUG)
+
+    # Create file handler:
+
+    file_hand = logging.FileHandler(get_chas().settings.log_file)
+    file_hand.setLevel(get_chas().settings.log_file_level)
+
+    # Create CHAS handler:
+
+    chas_log = CHASLogHandler()
+
+    # Creating File formatter:
+
+    file_format = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
+    file_hand.setFormatter(file_format)
+
+    # Adding the handlers to logger:
+
+    log.addHandler(file_hand)
+    log.addHandler(chas_log)
+
+    return log
+
+
+class CHASLogHandler(logging.Handler):
+
+    """
+    A CHAS custom handler designed to send logging info to the CHAS Chat window.
+    We do a lot of cool stuff here,
+    mainly format text to fit into the terminal's handling.
+
+    :param prefix: Prefix of the message to output
+    :type prefix: str
+    :param set_level: Value determining if we should set our own log level from the CHAS config
+    :type set_level: bool
+    """
+
+    def __init__(self, set_level=True):
+
+        super(CHASLogHandler, self).__init__()  # Call to our parent function
+
+        self.chas = get_chas()  # CHAS value to work with
+
+        if set_level:
+
+            # Set our own level:
+
+            self.setLevel(self.chas.settings.log_terminal_level)
+
+        # Creating a formatter and attaching it to ourselves:
+
+        self.setFormatter(logging.Formatter(fmt='%(levelname)s:%(message)s'))
+
+    def handle(self, record: logging.LogRecord) -> None:
+
+        """
+        Sends the incoming log record to the CHAS output window.
+
+        :param record: Incoming log record to send
+        :type record: str
+        """
+
+        # Add the content with prefix to the CHAS output window
+
+        self.chas.chat.add(self.format(record), prefix=record.name)
 
 
 class CHASThreadPoolExecutor:

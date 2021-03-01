@@ -1,6 +1,12 @@
-from chascurses import *
+from chaslib.chascurses import *
+
+from chaslib.sound.base import OutputHandler
+from chaslib.sound.input import WaveReader
+from chaslib.sound.out import PyAudioModule
+
 import curses
 from math import ceil
+import time
 
 
 def dummy(win, test):
@@ -21,7 +27,7 @@ def callback_test(win):  # PASSED
 
         # Adding callback for the F1 key
 
-        chas.add_callback(curses.KEY_F1, dummy, pass_self=True, args=['testing!'])
+        chas.add_key(curses.KEY_F1, dummy, pass_self=True, args=['testing!'])
 
         # Getting input and printing input:
 
@@ -297,6 +303,30 @@ def mulit_selection_test(win):
     print(opt)
 
 
+def run_dummy():
+
+    # Prints run dummy
+
+    print("Run Dummy!")
+
+
+def run_window_test(win):
+
+    # Tests the run option
+
+    win.bkgd('/')
+
+    win.refresh()
+
+    optionwin = OptionWindow.create_subwin_at_pos(win, 20, 50, position=OptionWindow.BOTTOM_LEFT)
+
+    optionwin.bkgd(' ')
+
+    optionwin.add_option("Run Dummy!", optionwin.RUN_OPTION, value=run_dummy)
+
+    optionwin.display()
+
+
 def all_tests(win):
 
     # Runs all tests
@@ -312,4 +342,32 @@ def all_tests(win):
         win.erase()
 
 
-curses.wrapper(all_tests)
+def sound_test():
+
+    # Tests the sound of CHAS audio
+
+    #wav1 = WaveReader('/data/Data/Stash/Projects/chas/server/media/songs/talking_heads/wild.wav')
+    wav2 = WaveReader('/data/Data/Stash/Projects/chas/server/media/sounds/listen.wav')
+    wav2.loop = True
+
+    out = PyAudioModule()
+    out.special = True
+
+    hand = OutputHandler()
+
+    #thing = hand.bind_synth(wav1)
+    thing2 = hand.bind_synth(wav2)
+
+    hand.add_output(out)
+
+    hand.start()
+
+    #thing.start()
+
+    #time.sleep(2)
+
+    thing2.start()
+
+    hand.join()
+
+#curses.wrapper(run_window_test)

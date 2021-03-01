@@ -10,6 +10,14 @@
 
 *.pyc
 
+# Exclude .vscode directories
+
+**/.vscode/
+
+# Exclude media directory:
+
+**/media/
+
 # Exclude virtual environments
 
 **/venv

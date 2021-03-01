@@ -1,6 +1,6 @@
 # A simple Music player for C.H.A.S
 
-from chaslib.extension import Extension
+from chaslib.extension import BaseExtension
 from chaslib.resptools import keyword_find, key_sta_find
 from random import shuffle, randint
 from chaslib.soundtools import WavePlayer
@@ -14,13 +14,13 @@ import threading
 # Will search through every file until match is found
 # 2. 'play Spanish Flea by Herb Albert
 # Will search for Spanish Flea in folder Herb Albert
-# 3. play  playlist Jams
+# 3. play playlist Jams
 # Will play playlist Jams
 # 4. play Spanish Flea in Jams
 # Will play Spanish Flea in playlist Jams
 
 
-class MusicPlayer(Extension):
+class MusicPlayer(BaseExtension):
 
     def __init__(self):
 

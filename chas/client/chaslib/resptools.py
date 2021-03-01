@@ -251,7 +251,7 @@ def help_text():
 
 class Personality(object):
     """
-    CHAS Personality Parent Class
+    CHAS BasePersonality Parent Class
     """
 
     def __init__(self, name, desc):
@@ -326,7 +326,7 @@ class Personality(object):
 
 class Personalities:
     """
-    CHAS Personality manager
+    CHAS BasePersonality manager
     """
 
     def __init__(self, chas):
@@ -334,7 +334,7 @@ class Personalities:
         self.chas = chas  # CHAS Masterclass instance
         self.selected = None  # Selected personality
         self._person = []  # List of personalities
-        self._name = 'Personality'  # Name of personality parent class
+        self._name = 'BasePersonality'  # Name of personality parent class
         self._core = CORE()  # CHAS CORE personality
 
         self._core.chas = self.chas
@@ -528,7 +528,7 @@ class CORE(Personality):
 
     def __init__(self):
 
-        super(CORE, self).__init__('CORE', 'CHAS Core Personality')
+        super(CORE, self).__init__('CORE', 'CHAS Core BasePersonality')
         self.last = None  # Last entered input
         self.out = "CORE:PERSONALITY"  # Output value
 
@@ -545,28 +545,28 @@ class CORE(Personality):
         if self.last is not None and self.last == mesg:
             # User is repeating
 
-            win.add("Do not repeat yourself.", output=self.out)
+            win.add("Do not repeat yourself.", prefix=self.out)
 
             return
 
         self.last = mesg
 
         if keyword_find(mesg, 'hello'):
-            win.add("Hello Human.", output=self.out)
+            win.add("Hello Human.", prefix=self.out)
 
             return
 
         if keyword_find(mesg, 'goodbye'):
-            win.add("Farewell Human.", output=self.out)
+            win.add("Farewell Human.", prefix=self.out)
 
             return
 
         if keyword_find(mesg, ['thank', 'thanks']):
 
-            win.add("I live to please.", output=self.out)
+            win.add("I live to please.", prefix=self.out)
 
             return
 
         else:
 
-            win.add("I don't understand.", output=self.out)
+            win.add("I don't understand.", prefix=self.out)

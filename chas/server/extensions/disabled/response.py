@@ -5,7 +5,7 @@ class GenResponse(Extension):
 
     def __init__(self):
 
-        super(GenResponse, self).__init__('Response-Handler', 'Extension for generating general responses')
+        super(GenResponse, self).__init__('Response-Handler', 'BaseExtension for generating general responses')
 
         # Done w/ init
 

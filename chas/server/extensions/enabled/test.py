@@ -1,9 +1,10 @@
 # A simple test file testing the extension service:
 
-from chaslib.extension import Extension
+from chaslib.extension import BaseExtension
+from chaslib.misctools import get_chas
 
 
-class TestExtension(Extension):
+class TestExtension(BaseExtension):
 
     def __init__(self):
 
@@ -28,15 +29,13 @@ class TestExtension(Extension):
         
             return True
 
+        if text == 'chasval':
+
+            win.add(str(get_chas()))
+            return True
+
         return False
 
     def method1(self):
 
         return self.test
-
-    def stop(self):
-
-        # Stopping extension
-
-        print("Stopping...")
-        return

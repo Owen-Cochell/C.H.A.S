@@ -20,8 +20,12 @@ from settings import Settings
 from chaslib.soundtools import Listener, Speaker
 from chaslib.chascurses import ChatWindow
 from chaslib.resptools import Personalities
+
+from chaslib.misctools import set_chas, get_logger
+
 import curses
 import threading
+import logging
 
 # These variables are not to be touched!
 
@@ -44,6 +48,9 @@ class CHAS:
         """
 
         self.running = False  # Value if we are running
+
+        set_chas(self)  # Set our CHAS value
+
         self.settings = Settings()  # CHAS settings object
         self.person = Personalities(self)  # CHAS personalities manager
         self.devices = Devices(self)  # CHAS device manager
@@ -55,6 +62,7 @@ class CHAS:
         self.thread = None  # Thread object used
         self.exit = 'exit'  # Exit keyword, for exiting chas
         self.chat = None  # CHAS chat window
+        self.log = None  # Logging object
 
         self.version = '1.0.0'
 
@@ -69,19 +77,32 @@ class CHAS:
 
         self.running = True
 
+        # Getting our logger:
+
+        self.log = get_logger("CORE")
+        self.log.info("Starting CHAS components...")
+
         # Parsing and loading extensions
+
+        self.log.info("Starting Extension Service...")
 
         val = self.extensions.parse_extensions()
 
         # Starting the socket server
 
+        self.log.info("Starting Socketserver and networking...")
+
         self.socket_server.start_socketserver()
 
         # Parsing and loading personalities
 
+        self.log.info("Starting personality service...")
+
         self.person.parse_personalities()
 
         # Starting listener
+
+        self.log.info("Starting audio recognition and listing service...")
 
         self.start_listen()
 
@@ -89,20 +110,41 @@ class CHAS:
 
         """
         Stops all CHAS Features
-        :return:
         """
 
         # Setting run value
 
         self.running = False
 
+        self.log.info("!! Stopping CHAS Components... !!")
+
         # Stopping socket server
+
+        self.log.info("Stopping socketserver and networking...")
 
         self.socket_server.stop_socketserver()
 
+        # Stopping listening service:
+
+
+
         # Disabling extensions:
 
+        self.log.info("Stopping and disabling extension service...")
+
         self.extensions.stop()
+
+        # Disabling personalities:
+
+        self.log.info("Stopping and disabling personality service...")
+
+        self.person.stop()
+
+        # Disabling ChatWindow:
+
+        self.log.info("Stopping CURSES output...")
+
+        self.chat.stop()
 
     def start_listen(self):
 
@@ -135,7 +177,7 @@ class CHAS:
 
             if not val:
 
-                # Extensions unable to handel input, send input to personality
+                # Extensions unable to handle input, send input to personality
 
                 self.speak.speak("I am unable to process your input at this time")
 
@@ -143,7 +185,6 @@ class CHAS:
 
         """
         Main method where curses is started
-        :return:
         """
 
         curses.wrapper(self._main)
@@ -153,12 +194,9 @@ class CHAS:
         """
         True main class, for use with the curses wrapper
         :param win: Curses window
-        :return:
         """
 
         self._master_win = win
-
-        self.start()
 
         max_y, max_x = self._master_win.getmaxyx()
 
@@ -167,6 +205,10 @@ class CHAS:
         # Adding CHAS object so the chatwindow can get statistics
 
         self.chat.chas = self
+
+        # Start the components:
+
+        self.start()
 
         # Event loop for processing input:
 
@@ -183,6 +225,8 @@ class CHAS:
                 # Close down CHAS and exit
 
                 self.stop()
+
+                self.log.info("CHAS Shutdown Complete!")
 
                 return
 

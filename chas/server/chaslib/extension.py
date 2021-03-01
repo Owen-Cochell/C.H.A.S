@@ -4,9 +4,10 @@ import os
 import pkgutil
 import inspect
 from chaslib.resptools import keyword_find, key_sta_find, string_clean
+from chaslib.misctools import get_logger
 
 
-class Extension(object):
+class BaseExtension(object):
 
     """
     Extension base class.
@@ -75,6 +76,18 @@ class Extension(object):
 
         pass
 
+    def unload(self):
+
+        """
+        Method called when the extension is removed from our cache.
+        This is the final method that will be called before the function is removed via garbage collection.
+
+        The function should finish up everything that the extension is doing.
+        'stop()' will always be called before this function is called.
+        """
+
+        pass
+
     def add_help(self, name, desc, usage=''):
 
         """
@@ -84,7 +97,6 @@ class Extension(object):
         :param name: Name of the command to register
         :param desc: Description of the command to register
         :param usage: Usage of the command to register
-        :return:
         """
 
         pass
@@ -104,7 +116,8 @@ class Extensions:
         self._enabled_extensions = []  # List of enabled extensions
         self._disabled_extensions = []  # List of disabled extensions
         self._core = CoreTools()  # Builtin CHAS functions
-        self._name = 'Extension'  # Name of extension parent class
+        self._name = 'BaseExtension'  # Name of extension parent class
+        self.log = get_logger("CHAS:EXTEN")
 
         self._core.chas = self.chas  # Binding the CHAS masterclass to the Core Tools extension
 
@@ -120,121 +133,136 @@ class Extensions:
     def disable_extension(self, name, stop=True):
 
         """
-        Disables CHAS extension
+        Disables a CHAS extension using th given name.
+
+        We return True if successful, False if not.
+
         :param name: Name of extension to disable
         :arg stop: Call 'stop' method before disabling it
-        :return:
         """
+
+        self.log.info("Disabling extension: [{}]...".format(name))
 
         # Searching for extension:
 
-        for ext in self._enabled_extensions:
+        ext = self.find(name)
 
-            # Checking name:
+        if not ext:
 
-            if ext.name == name:
+            # Could not find extension, lets exit:
 
-                # Found our extension
+            self.log.warning("Could not disable extension [{}]!".format(name))
 
-                # Removing extension from the enabled list
+            return False
 
-                self._enabled_extensions.remove(ext)
+        if ext in self._enabled_extensions:
 
-                if stop:
+            self._enabled_extensions.remove(ext)
 
-                    # Stopping extension:
+        if stop:
 
-                    try:
+            # Stopping extension:
 
-                        ext.disable()
+            try:
 
-                    except:
+                # Attempting to disable the extension:
 
-                        continue
+                ext.disable()
 
-                # Disabling extension:
+            except Exception as e:
 
-                ext.enabled = False
+                # Lets log and continue:
 
-                # Adding extension to disabled extension list
+                self.log.warning("Exception occurred when disabling extension: [{}]!".format(name), exc_info=e)
+                self.log.warning("We will skip 'disable()' and force remove [{}]".format(name))
 
-                self._disabled_extensions.append(ext)
+        # Disabling extension:
 
-                return True
+        ext.enabled = False
 
-        return False
+        # Adding extension to disabled extension list
 
-    def stop(self):
+        self._disabled_extensions.append(ext)
 
-        """
-        Disabled all extensions,
-        Calls the stop() method
-        :return:
-        """
+        self.log.info("Successfully disabled extension [{}]!".format(name))
 
-        for ext in self._enabled_extensions:
-
-            # Disabling extension
-
-            self.disable_extension(ext.name)
+        return True
 
     def enable_extension(self, name):
 
         """
-        Enables extension by name
+        Enables extension by name.
+
+        We call 'enable()' on the extension,
+        so it can run any setup code that it needs.
+        If this call fails, then we will refuse to load the extension.
+
         :param name: Name of the extension
-        :return:
+        :return: True for success, False for failure
+        :rtype: bool
         """
+
+        self.log.info("Enabling extension [{}]...".format(name))
 
         # Searching for extension:
 
-        for ext in self._disabled_extensions:
+        ext = self.find(name)
 
-            # Checking extension name
+        if not ext:
 
-            if ext.name == name:
+            # We failed to find the extension! log and return
 
-                # Found our extension
+            self.log.warning("Unable to enable extension [{}] - Name not found!".format(name))
 
-                # Removing extension from disabled
+            return False
 
-                self._disabled_extensions.remove(ext)
+        # Removing extension from disabled
 
-                # Starting extension:
+        if ext in self._disabled_extensions:
 
-                ext.enabled = True
+            self._disabled_extensions.remove(ext)
 
-                try:
+        # Starting extension:
 
-                    ext.enable()
+        ext.enabled = True
 
-                except:
+        try:
 
-                    # Error occurred, logging and handling
-                    # Skipping over extension start and returning failure
+            ext.enable()
 
-                    ext.enabled = False
+        except Exception as e:
 
-                    self._disabled_extensions.append(ext)
+            # Error occurred, logging and handling
+            # Skipping over extension start and returning failure
 
-                    return False
+            self.log.warning("Exception occurred when enabling [{}]!".format(name), exc_info=e)
+            self.log.warning("NOT enabling extension [{}]!".format(name))
 
-                # Enabling extension
+            ext.enabled = False
 
-                # Adding extension to enabled list
+            self._disabled_extensions.append(ext)
 
-                self._enabled_extensions.append(ext)
+            return False
 
-                return True
+        # Enabling extension
 
-        return False
+        # Adding extension to enabled list
+
+        if ext not in self._enabled_extensions:
+
+            self._enabled_extensions.append(ext)
+
+        self.log.info("Successfully enabled extension [{}]!".format(name))
+
+        return True
 
     def parse_extensions(self):
 
         """
         Method for parsing and loading extensions
-        :return:
         """
+
+        self.log.info("Parsing and rebuilding extension cache...")
 
         # Clearing loaded extensions(if any)
 
@@ -251,36 +279,27 @@ class Extensions:
 
             # Something went wrong, probably logged already
 
+            self.log.warn("Unable to parse extentions!")
+
             return False
+
+        self.log.info("Found [{}] extensions to enable".format(len(self._enabled_extensions)))
 
         # Enabling extensions that are enabled
 
         for ext in self._enabled_extensions:
 
-            # Enabling extension
+            # Enabling extension:
 
-            ext.enabled = True
+            self.enable_extension(ext.name)
 
-            # Starting extension
-
-            try:
-
-                ext.enable()
-
-            except:
-
-                # Error occurred, logging and handling
-                # Skipping starting extension
-
-                ext.disable()
-                self._enabled_extensions.remove(ext)
-                self._disabled_extensions.append(ext)
-
-                continue
+        self.log.info("Enabled [{}] extensions".format(len(self._enabled_extensions)))
 
         # Loading disabled extensions
 
         val = self._parse_directory(self._disabled_directory, self._disabled_extensions)
+
+        self.log.info("Found [{}] disabled extensions".format(len(self._disabled_extensions)))
 
         # Sorting extension lists
 
@@ -321,6 +340,71 @@ class Extensions:
 
         return False
 
+    def stop(self):
+
+        """
+        Disabled all extensions,
+        Calls the stop() method on each extension,
+        and the unloads them.
+        """
+
+        for ext in self._enabled_extensions:
+
+            # Disabling extension
+
+            self.disable_extension(ext.name)
+
+    def find(self, name, disabled=False):
+
+        """
+        Finds and returns an extension by name.
+
+        If the extension is not found,
+        then we we return False.
+
+        By default, we search only enabled extensions.
+        If 'disabled' is True, then we search in the disabled category.
+
+        :param name: Name of the extension to search for
+        :type name: str
+        :param disabled: Determines if we should search disabled extensions
+        :type disabled: bool
+        :return: Instance of the extension
+        :rtype: BaseExtension
+        """
+
+        self.log.debug("Searching for extension with name: [{}]".format(name))
+
+        # Determine which list to search:
+
+        if disabled:
+
+            # Search through disabled extensions:
+
+            collec = self._disabled_extensions
+
+        else:
+
+            # Search through enabled extensions
+
+            collec = self._enabled_extensions
+
+        # Search through our collection:
+
+        for ext in collec:
+
+            # Check if the name is valid:
+
+            if ext.name == name:
+
+                # Found our extension!
+
+                self.log.debug("Found extension [{}]!".format(name))
+
+                return ext
+
+        self.log.debug("Unable to find extension [{}]!".format(name))
+
     def _parse_directory(self, direct, final):
 
         """
@@ -331,8 +415,6 @@ class Extensions:
         """
 
         # Iterating over every file in specified directory
-
-        print("Path: {}".format(direct))
 
         try:
 
@@ -362,8 +444,6 @@ class Extensions:
 
                                 # Found a CHAS extension
 
-                                print(obj)
-
                                 obj._bind_chas(obj, self.chas)
 
                                 plug = obj()
@@ -376,9 +456,7 @@ class Extensions:
 
             # Something went wrong
 
-            print("Their was an error while parsing extensions: {}".format(e))
-
-            return False
+            self.log.error("Error occured while trversing: {}".format(e))
 
         return True
 
@@ -387,14 +465,15 @@ class Extensions:
         """
         Gets extension priority
         To be used by the sorting method in 'parse_extensions()'
-        :param ext: Extension instance
-        :return:
+        :param ext: BaseExtension instance
+        :return: Extension priority
+        :rtype: int
         """
 
         return ext.priority
 
 
-class CoreTools(Extension):
+class CoreTools(BaseExtension):
 
     """
     CHAS builtins
@@ -425,8 +504,8 @@ class CoreTools(Extension):
 
                 # Reload the extensions reconfigure them
 
-                win.add("[Reloading and reconfiguring extensions]", output=self.out)
-                win.add("[Please wait...]", output=self.out)
+                win.add("[Reloading and reconfiguring extensions]", prefix=self.out)
+                win.add("[Please wait...]", prefix=self.out)
 
                 val = self.chas.extensions.parse_extensions()
 
@@ -434,12 +513,12 @@ class CoreTools(Extension):
 
                     # Procedure was a success
 
-                    win.add("[Task Completed Successfully]", output=self.out)
+                    win.add("[Task Completed Successfully]", prefix=self.out)
 
                     return True
 
-                win.add("[Task Failed]", output=self.out)
-                win.add("[Check usage logs for more information]", output=self.out)
+                win.add("[Task Failed]", prefix=self.out)
+                win.add("[Check usage logs for more information]", prefix=self.out)
 
                 return True
 
@@ -481,21 +560,21 @@ class CoreTools(Extension):
 
                     # User wants text-based output
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
-                    win.add("[Enabled Extensions:]", output=self.out)
+                    win.add("[Enabled Extensions:]", prefix=self.out)
 
                     for ext in dic['enabled']:
 
-                        win.add(" - {}: {}".format(ext.name, ext.description), output=self.out)
+                        win.add(" - {}: {}".format(ext.name, ext.description), prefix=self.out)
 
-                    win.add("[Disabled Extensions:]", output=self.out)
+                    win.add("[Disabled Extensions:]", prefix=self.out)
 
                     for ext in dic['disabled']:
 
                         win.add(" - {}: {}".format(ext.name, ext.description))
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
                     return True
 
@@ -509,7 +588,7 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Disabling Extension: {}]".format(val), output=self.out)
+                win.add("[Disabling Extension: {}]".format(val), prefix=self.out)
 
                 # Disabling name
 
@@ -517,12 +596,12 @@ class CoreTools(Extension):
 
                 if ret:
 
-                    win.add("[Successfully Disabled Extension: {}]".format(val), output=self.out)
+                    win.add("[Successfully Disabled Extension: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to disable extension: {}]".format(val), output=self.out)
-                win.add("[Check usage logs more more details]", output=self.out)
+                win.add("[Failed to disable extension: {}]".format(val), prefix=self.out)
+                win.add("[Check usage logs more more details]", prefix=self.out)
                 win.add("[The extension was unloaded, and will not be used again for the remainder of this runtime]")
 
                 return True
@@ -537,7 +616,7 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Enabling Extension: {}]".format(val), output=self.out)
+                win.add("[Enabling Extension: {}]".format(val), prefix=self.out)
 
                 # Enabling name
 
@@ -545,12 +624,12 @@ class CoreTools(Extension):
 
                 if ret:
 
-                    win.add("[Successfully Enabled Extension: {}]".format(val), output=self.out)
+                    win.add("[Successfully Enabled Extension: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to enable extension: {}]".format(val), output=self.out)
-                win.add("[Check usage logs more more details]", output=self.out)
+                win.add("[Failed to enable extension: {}]".format(val), prefix=self.out)
+                win.add("[Check usage logs more more details]", prefix=self.out)
 
                 return True
 
@@ -562,8 +641,8 @@ class CoreTools(Extension):
 
                 # User wants to reload personalities
 
-                win.add("[Reloading and reconfiguring personalities]", output=self.out)
-                win.add("[Please wait...]", output=self.out)
+                win.add("[Reloading and reconfiguring personalities]", prefix=self.out)
+                win.add("[Please wait...]", prefix=self.out)
 
                 val = self.chas.person.parse_personalities()
 
@@ -571,14 +650,14 @@ class CoreTools(Extension):
 
                     # Successfully parsed personalities
 
-                    win.add("[Task Completed Successfully]", output=self.out)
+                    win.add("[Task Completed Successfully]", prefix=self.out)
 
                     return True
 
                 # Did not complete task
 
-                win.add("[Task Failed]", output=self.out)
-                win.add("[Check usage logs for more information]", output=self.out)
+                win.add("[Task Failed]", prefix=self.out)
+                win.add("[Check usage logs for more information]", prefix=self.out)
 
                 return True
 
@@ -611,16 +690,16 @@ class CoreTools(Extension):
 
                     # User wants text-based output
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
-                    win.add("[Available Personalities:]", output=self.out)
+                    win.add("[Available Personalities:]", prefix=self.out)
 
                     for per in dic:
 
                         win.add(" - {}: {} {}".format(per.name, per.description,
-                                                      ("< Selected" if per.selected else '')), output=self.out)
+                                                      ("< Selected" if per.selected else '')), prefix=self.out)
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
                     return True
 
@@ -634,19 +713,19 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Selecting personality: {}]".format(val), output=self.out)
-                win.add("[Please wait, this could take some time depending on the personality...]", output=self.out)
+                win.add("[Selecting personality: {}]".format(val), prefix=self.out)
+                win.add("[Please wait, this could take some time depending on the personality...]", prefix=self.out)
 
                 ret = self.chas.person.select(val)
 
                 if ret:
 
-                    win.add("[Successfully selected personality: {}]".format(val), output=self.out)
+                    win.add("[Successfully selected personality: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to select personality: {}]".format(val), output=self.out)
-                win.add("[See usage logs for more details]", output=self.out)
+                win.add("[Failed to select personality: {}]".format(val), prefix=self.out)
+                win.add("[See usage logs for more details]", prefix=self.out)
 
                 return True
 

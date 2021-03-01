@@ -1,9 +1,9 @@
-from chaslib.resptools import Personality
-from chatterbot import ChatBot
-from chatterbot.trainers import ChatterBotCorpusTrainer, UbuntuCorpusTrainer
+from chaslib.resptools import BasePersonality
+#from chatterbot import ChatBot
+#from chatterbot.trainers import ChatterBotCorpusTrainer, UbuntuCorpusTrainer
 
 
-class Chatter(Personality):
+class Chatter(BasePersonality):
 
     """
     CHAS Chatter personality
@@ -20,9 +20,11 @@ class Chatter(Personality):
         Start method, loading chatbot and database
         """
 
+        '''
         self.bot = ChatBot('CHAS',
                            storage_adapter='chatterbot.storage.SQLStorageAdapter',
                            database_uri='sqlite:///db.sqlite3')
+        '''
 
     def handel(self, mesg, talk, win):
 
@@ -36,4 +38,4 @@ class Chatter(Personality):
 
         response = self.bot.get_response(mesg)
 
-        win.add(response.text, output="CHATTER")
+        win.add(response.text, prefix="CHATTER")

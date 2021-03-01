@@ -4,6 +4,7 @@
 import speech_recognition as sr
 from pocketsphinx import *
 import os
+from logging import DEBUG, WARN, WARNING, ERROR, CRITICAL, INFO
 
 
 class Settings:
@@ -20,6 +21,10 @@ class Settings:
         self.id_dir = os.path.join(self.client_dir, 'id/')
 
         self.personality_dir = os.path.join(self.client_dir, 'personality/')
+
+        self.log_file = 'log_chas.txt'  # Path to logging file
+        self.log_file_level = DEBUG
+        self.log_terminal_level = INFO
 
         self.host = '127.0.0.1'
         self.port = 65432

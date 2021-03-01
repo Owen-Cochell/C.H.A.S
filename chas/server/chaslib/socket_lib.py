@@ -117,8 +117,6 @@ class CHASocket:
                 ">H", content
             )[0]
 
-            print(f"Header length: {self._jsonheader_len}")
-
             return
 
     def _process_jsonheader(self):
@@ -142,9 +140,7 @@ class CHASocket:
 
                 if reqhd not in self._jsonheader:
 
-                    print("Header missing required values!")
-
-        print(f"JSON Header: {self._jsonheader}")
+                    raise Exception("Malformed JSON Header!")
 
         return
 
@@ -153,8 +149,6 @@ class CHASocket:
         # Method for processing the request
 
         content_len = self._jsonheader["content-length"]
-
-        print(f"Content length: {content_len}")
 
         contents = self._read(content_len)
 
@@ -167,8 +161,6 @@ class CHASocket:
         encoding = self._jsonheader["content-encoding"]
 
         content = self._json_decode(contents, encoding=encoding)
-
-        print("Received request: ", repr(content), " from: ", self.addr)
 
         self._jsonheader = None
         self._jsonheader_len = None

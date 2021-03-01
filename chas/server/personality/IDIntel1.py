@@ -1,7 +1,7 @@
-from server.chaslib.resptools import Personality
+from chaslib.resptools import BasePersonality
 
 
-class IDIntell1(Personality):
+class IDIntell1(BasePersonality):
 
     """
     CHAS Ideal intelligence 1.
@@ -15,5 +15,5 @@ class IDIntell1(Personality):
 
         # Instantiate the parent:
 
-        super(Personality).__init__("IDIntell1", "CHAS Ideal intelligence 1")
+        super(BasePersonality).__init__("IDIntell1", "CHAS Ideal intelligence 1")
 

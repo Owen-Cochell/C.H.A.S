@@ -7,7 +7,7 @@ class TestExtension(Extension):
 
     def __init__(self):
 
-        super(TestExtension, self).__init__('Test-Extension', 'A Simple test extension')
+        super(TestExtension, self).__init__('Test-BaseExtension', 'A Simple test extension')
         self.test = 'This is a test!'
 
     def match(self, text, talk):

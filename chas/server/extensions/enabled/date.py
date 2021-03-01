@@ -1,11 +1,11 @@
 # Extension that wraps the python datetime module
 
-from chaslib.extension import Extension
+from chaslib.extension import BaseExtension
 import datetime
 from chaslib.resptools import keyword_find, key_sta_find
 
 
-class DateTime(Extension):
+class DateTime(BaseExtension):
 
     def __init__(self):
 

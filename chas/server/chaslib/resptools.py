@@ -9,8 +9,11 @@ import inspect
 import traceback
 import string
 import re
+import logging
+
 from chaslib.soundtools import *
 from chaslib.netools import *
+from chaslib.misctools import get_logger
 
 
 def keyword_find(sent, word, start=0):
@@ -238,35 +241,10 @@ def key_search(sent, talk=False):
         return random_fail(talk)
 
 
-def chat_ban(ver):
-
-    resp = f'''+================================================+
-C.H.A.S Text Interface system Ver: {ver}
-Welcome to the C.H.A.S Text Interface System!
-Please make sure your statements are spelled correctly.
-C.H.A.S is not case sensitive, so Go CrAzY!
-Type 'help' for more details
-'''
-
-    return resp
-
-
-def help_text():
-
-    resp = """+=======================================================+")
---== C.H.A.S Commands: ==--
-'help' to show this menu
-'exit' to exit chat
-+=======================================================+
-"""
-
-    return resp
-
-
-class Personality(object):
+class BasePersonality(object):
 
     """
-    CHAS Personality Parent Class
+    CHAS BasePersonality Parent Class
     """
 
     def __init__(self, name, desc):
@@ -298,7 +276,18 @@ class Personality(object):
         """
         Method called when personality is first loaded
         Should be overridden in child class
-        :return:
+        """
+
+        pass
+
+    def unload(self):
+
+        """
+        Method called when the extension is removed from our cache.
+        This is the final method that will be called before the function is removed via garbage collection.
+
+        The function should finish up everything that the personality is doing.
+        'stop()' will always be called before this function is called.
         """
 
         pass
@@ -308,7 +297,6 @@ class Personality(object):
         """
         Method called when personality is selected
         Should be overridden in child class
-        :return:
         """
 
         pass
@@ -318,7 +306,6 @@ class Personality(object):
         """
         Method called when personality is de-selected
         Should be overridden in child class
-        :return:
         """
 
         pass
@@ -331,7 +318,6 @@ class Personality(object):
         :param mesg: Message as string
         :param talk: Boolean determining if we are talking
         :param win: Output object, differs based on talk value
-        :return:
         """
 
         pass
@@ -341,7 +327,6 @@ class Personality(object):
         """
         Binds CHAS to the personality
         :param chas: CHAS Masterclass
-        :return:
         """
 
         self.chas = chas
@@ -350,7 +335,7 @@ class Personality(object):
 class Personalities:
 
     """
-    CHAS Personality manager
+    CHAS BasePersonality manager
     """
 
     def __init__(self, chas):
@@ -358,10 +343,10 @@ class Personalities:
         self.chas = chas  # CHAS Masterclass instance
         self.selected = None  # Selected personality
         self._person = []  # List of personalities
-        self._name = 'Personality'  # Name of personality parent class
+        self._name = 'BasePersonality'  # Name of personality parent class
         self._core = CORE()  # CHAS CORE personality
 
-        self._core.chas = self.chas
+        self.log = get_logger("CORE:PERSON_HAND")
 
     def get_personalities(self):
 
@@ -377,24 +362,26 @@ class Personalities:
         """
         Parses and loads all personalities at personality directory
         Starts the personality
-        :return:
         """
+
+        self.log.info("Parsing and rebuilding personality cache...")
 
         # Clearing personality list
 
-        self._person.clear()
+        self.stop()
 
         # Adding CORE personality to list
 
-        self._person.append(self._core)
+        self.load_personality(self._core)
 
         # Automatically select the CORE personality
 
-        self.select("CORE")
+        self.select(self._core.name)
 
         # Getting personalises from directory
 
-        val = self._parse_directory([self.chas.settings.personality_dir], self._person)
+        final = []
+        val = self._parse_directory([self.chas.settings.personality_dir], final)
 
         if not val:
 
@@ -404,80 +391,307 @@ class Personalities:
 
         # Starting personalities
 
-        for per in self._person:
+        for per in final:
 
-            try:
+            # Attempt to load personality:
 
-                per.load()
-
-            except:
-
-                # Something went wrong while loading personality
-                # Logging and removing from list
-
-                self._person.remove(per)
-
-                continue
+            self.load_personality(per)
 
         return True
 
     def select(self, name):
 
         """
-        Selects personality to be used by name
+        Selects personality to be used by name.
+        We stop the currently selected personality,
+        and start the incoming personality.
+
+        If the 'start()' method fails,
+        then we fall back on 'CORE:PERSONALITY'
+        to act as a placeholder and stable solution.
+
+        We return True for success, and False for failure.
+
         :param name: Name of personality
-        :return:
+        :type name: str
+        :return: True for success, False for Failure
+        :rtype: bool
         """
 
-        for per in self._person:
+        self.log.info("Selecting personality: [{}]...".format(name))
 
-            if per.name == name:
+        # Attempt to find personality:
 
-                # Found our personality
+        person = self.find(name)
 
-                # Stopping current personality
+        if not person:
 
-                if self.selected is not None:
+            # Unable to find personality
 
-                    try:
+            self.log.warning("Unable to select personality: [{}] - Name not found!".format(name))
 
-                        self.selected.stop()
+            return False
 
-                    except:
+        # Stopping current personality, if one is selected:
 
-                        # Something went wrong while stopping personality
-                        # Logging and continuing
+        if self.selected is not None:
 
-                        pass
+            self.stop_personality(self.selected.name)
 
-                    self.selected._deselect()
+            # Deselecting current personality
 
-                # Changing selected personality
+            self.log.debug("De-selecting current personality: [{}]...".format(self.selected.name))
 
-                self.selected = per
+            self.selected._deselect()
+            self.selected = None
 
-                # Setting selected value:
+        # Stating new personality:
 
-                self.selected._select()
+        val = self.start_personality(name)
 
-                # Starting personality:
+        # Check if starting was successful:
 
-                try:
+        if not val:
 
-                    per.start()
+            # Failed to start, fallback
 
-                except:
+            self.log.warning("Failed to start [{}] - Falling back on CORE:PERSONALITY".format(name))
 
-                    # Something went wrong while starting personality
-                    # Logging and returning failure
+            return False
 
-                    self.select("CORE")
+        # Changing selected personality
 
-                    return False
+        self.log.debug("Setting selected to: {}".format(person.name))
 
-                return True
+        self.selected = person
 
-        return False
+        # Setting selected value:
+
+        self.selected._select()
+
+        # BasePersonality successfully selected!
+
+        self.log.info("Successfully selected personality: [{}]!".format(name))
+
+        return True
+
+    def load_personality(self, person):
+
+        """
+        Loads a given personality, and adds it to the collection.
+
+        The personality MUST inherit 'BasePersonality',
+        or else the operation will fail.
+
+        We also call 'load()' for the personality to be added.
+        If this method fails, then we will fail and refuse to add it.
+
+        :param person: Personality to add
+        :type person: BasePersonality
+        :return: True for success, False for failure
+        :rtype: bool
+        """
+
+        # Checking if personality is valid subclass:
+
+        if not isinstance(person, BasePersonality):
+
+            # Not a valid personality!
+
+            self.log.warning("Object [{}] is not a valid personalty! Must subclass BasePersonality!")
+
+            return False
+
+        self.log.debug("Loading personality: [{}]...".format(person.name))
+
+        # Load the personality:
+
+        try:
+
+            person.load()
+
+        except Exception as e:
+
+            # Failed to load personality, skip the operation:
+
+            self.log.warning("Failed to load personality: [{}] - Exception upon 'load()'!".format(person.name),
+                             exc_info=e)
+
+            return False
+
+        # Add the personality to the list:
+
+        self._person.append(person)
+
+        self.log.debug("Successfully loaded personality: [{}]!".format(person.name))
+
+        return True
+
+    def start_personality(self, name):
+
+        """
+        Starts a personality.
+
+        We do this by calling the 'start()' function of the personality.
+
+        You normally shouldn't call this method,
+        as it is already invoked by 'select()'.
+
+        However, it is provided for logging capabilities,
+        and if you have a special use for this feature.
+
+        We return True if successful, False if not.
+
+        :param name: Name of the personality to start
+        :type name: str
+        :return: True for success, False for failure
+        :rtype: bool
+        """
+
+        self.log.debug("Starting personality with name: [{}]...".format(name))
+
+        # Get the personality by name:
+
+        per = self.find(name)
+
+        if not per:
+
+            # Unable to find personality
+
+            self.log.warning("Unable to start personality: [{}] - Name not found!!".format(name))
+
+            return
+
+        # Attempting to start the personality:
+
+        try:
+
+            per.start()
+
+        except Exception as e:
+
+            # Something went wrong while starting personality
+            # Logging and returning failure
+
+            self.log.warning("Exception occurred when starting: [{}]".format(self.selected.name), exc_info=e)
+
+            return False
+
+        # Started personality!
+
+        self.log.debug("Successfully started personality: [{}]!".format(name))
+
+        return True
+
+    def stop_personality(self, name):
+
+        """
+        Stops a personality.
+
+        We do this by calling the 'stop()' function of the personality.
+
+        You normally shouldn't call this method,
+        as it is already invoked by 'select()'.
+
+        However, it is provided for logging capabilities,
+        and if you have a special use for this feature.
+
+        We return True if successful, False if not.
+
+        :param name: Name of the personality to stop
+        :type name: str
+        :return: True for success, False for failure
+        :rtype: bool
+        """
+
+        self.log.debug("Stopping personality with name: [{}]".format(name))
+
+        # Attempt to find the personality
+
+        person = self.find(name)
+
+        if not person:
+
+            # Unable to find personality
+
+            self.log.warning("Unable to stop personality: [{}] - Name not found!".format(person))
+
+        try:
+
+            # Try to stop the personality:
+
+            self.selected.stop()
+
+        except Exception as e:
+
+            # Something went wrong while stopping personality
+            # Logging and continuing
+
+            self.log.warning("Exception occurred when stopping: {}".format(self.selected.name), exc_info=e)
+
+            return False
+
+        # BasePersonality stopped successfully!
+
+        self.log.debug("Successfully stopped personality: [{}]!".format(name))
+
+        return True
+
+    def unload_personality(self, name):
+
+        """
+        Unloads a personality by name.
+        This not only stops the personality,
+        removes it from the personality cache.
+
+        We call 'unload()' to tell the personality to finish up whatever it is doing.
+        Even if 'unload()' fails, we log the failure and remove it anyway.
+
+        To work with unloaded personalities,
+        re-build the personality cache with 'parse_personalities'.
+
+        :param name: Name of the personality to unload
+        :type name: str
+        """
+
+        self.log.debug("Un-loading personality with name: {}".format(name))
+
+        # Finding personality:
+
+        person = self.find(name)
+
+        if person is None:
+
+            # Could not find, return
+
+            self.log.warning("Could not unload personality with name: [{}]!".format(name))
+
+            return
+
+        # Stopping the personality:
+
+        self.stop_personality(name)
+
+        # Un-load the personality:
+
+        try:
+
+            person.unload()
+
+        except Exception as e:
+
+            # Failed to unload personality, log it and continue
+
+            self.log.warning("Exception occurred when unloading personality: [{}]".format(name), exc_info=e)
+            self.log.warning("We will skip calling 'unload()' and will forcefully remove [{}]".format(name))
+
+        # Remove the personality from the personality cache:
+
+        self.log.debug("Removing [{}] from personality cache...".format(name))
+
+        self._person.remove(person)
+
+        self.log.debug("Unloaded personality [{}] from cache!".format(name))
 
     def _parse_directory(self, direct, final):
 
@@ -522,30 +736,80 @@ class Personalities:
 
             # Something went wrong
 
-            print("Their was an error while parsing personalities: {}".format(e))
-
             traceback.print_exc()
 
             return False
 
         return True
 
+    def stop(self):
+
+        """
+        Stops and unloads all personalities.
+        """
+
+        self.log.debug("Stopping and unloading all personalities...")
+
+        for num, per in enumerate(self._person):
+
+            # Unload the personality:
+
+            self.unload_personality(per.name)
+
+        self.log.debug("Done stopping and unloading all personalities!")
+
+    def find(self, name):
+
+        """
+        Finds and returns a personality by name.
+        We return 'None' if the extension is not found.
+
+        :param name: Name of personality to remove
+        :type name: str
+        :return: Personality with name
+        :rtype: BasePersonality
+        """
+
+        # Iterate over all personalities"
+
+        self.log.debug("Searching for personality with name: [{}]...".format(name))
+
+        for per in self._person:
+
+            # Check if the name matches:
+
+            if per.name == name:
+
+                # Found our personality! Return it...
+
+                self.log.debug("Found personality [{}]!".format(name))
+
+                return per
+
+        # Unable to find our personality...
+
+        self.log.warning("Unable to find personality [{}]!".format(name))
+
+        return None
+
     def handel(self, mesg, talk, win):
 
         """
-        Handles input from user
+        Handles input from user.
+
         :param mesg: Input
         :param talk: Weather we are talking
         :param win: Output object, varies based on talk
-        :return:
         """
+
+        self.log.debug("Sending text [{}] to personality [{}]".format(mesg, self.selected.name))
 
         self.selected.handel(mesg, talk, win)
 
         return
 
 
-class CORE(Personality):
+class CORE(BasePersonality):
 
     """
     CHAS CORE personality
@@ -555,7 +819,7 @@ class CORE(Personality):
 
     def __init__(self):
 
-        super(CORE, self).__init__('CORE', 'CHAS Core Personality')
+        super(CORE, self).__init__('CORE', 'CHAS Core BasePersonality')
         self.last = None  # Last entered input
         self.out = "CORE:PERSONALITY"  # Output value
 
@@ -573,7 +837,7 @@ class CORE(Personality):
 
             # User is repeating
 
-            win.add("Why do you repeat yourself?", output=self.out)
+            win.add("Why do you repeat yourself?", prefix=self.out)
 
             return
 
@@ -581,22 +845,22 @@ class CORE(Personality):
 
         if keyword_find(mesg, 'hello'):
 
-            win.add("Hello Human.", output=self.out)
+            win.add("Hello Human.", prefix=self.out)
 
             return
 
         if keyword_find(mesg, 'goodbye'):
 
-            win.add("Farewell Human.", output=self.out)
+            win.add("Farewell Human.", prefix=self.out)
 
             return
 
         if keyword_find(mesg, ['thank', 'thanks']):
 
-            win.add("I live to please.", output=self.out)
+            win.add("I live to please.", prefix=self.out)
 
             return
 
         else:
 
-            win.add("I don't understand.", output=self.out)
+            win.add("I don't understand.", prefix=self.out)

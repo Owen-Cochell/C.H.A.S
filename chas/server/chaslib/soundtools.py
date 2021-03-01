@@ -46,8 +46,6 @@ class Listener:
 
         # Waiting for instance to be unpaused
 
-        print("Waiting")
-
         val = self.pause.wait(timeout=timeout)
 
         if not val:
@@ -181,8 +179,6 @@ class Listener:
             # Attempting to recognize with PocketSphinx
 
             words = self.rec.recognize_sphinx(audio)
-
-            print(words)
 
         except sr.UnknownValueError:
 
@@ -355,7 +351,7 @@ class RawAudio(object):
 
         self.playing = True
 
-        if self.size is not 0:
+        if self.size != 0:
 
             # Calculate how many iterations we must do to reach the end:
 

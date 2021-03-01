@@ -9,7 +9,7 @@ from chaslib.resptools import keyword_find, key_sta_find, string_clean
 class Extension(object):
 
     """
-    Extension base class.
+    BaseExtension base class.
     All CHAS extensions must inherent this class to be loaded
     """
 
@@ -101,7 +101,7 @@ class Extensions:
         self._enabled_extensions = []  # List of enabled extensions
         self._disabled_extensions = []  # List of disabled extensions
         self._core = CoreTools()  # Builtin CHAS functions
-        self._name = 'Extension'  # Name of extension parent class
+        self._name = 'BaseExtension'  # Name of extension parent class
 
         self._core.chas = self.chas
 
@@ -376,7 +376,7 @@ class Extensions:
         """
         Gets extension priority
         To be used by the sorting method in 'parse_extensions()'
-        :param ext: Extension instance
+        :param ext: BaseExtension instance
         :return:
         """
 
@@ -413,8 +413,8 @@ class CoreTools(Extension):
 
                 # Reload the extensions reconfigure them
 
-                win.add("[Reloading and reconfiguring extensions]", output=self.out)
-                win.add("[Please wait...]", output=self.out)
+                win.add("[Reloading and reconfiguring extensions]", prefix=self.out)
+                win.add("[Please wait...]", prefix=self.out)
 
                 val = self.chas.extensions.parse_extensions()
 
@@ -422,12 +422,12 @@ class CoreTools(Extension):
 
                     # Procedure was a success
 
-                    win.add("[Task Completed Successfully]", output=self.out)
+                    win.add("[Task Completed Successfully]", prefix=self.out)
 
                     return True
 
-                win.add("[Task Failed]", output=self.out)
-                win.add("[Check usage logs for more information]", output=self.out)
+                win.add("[Task Failed]", prefix=self.out)
+                win.add("[Check usage logs for more information]", prefix=self.out)
 
                 return True
 
@@ -469,21 +469,21 @@ class CoreTools(Extension):
 
                     # User wants text-based output
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
-                    win.add("[Enabled Extensions:]", output=self.out)
+                    win.add("[Enabled Extensions:]", prefix=self.out)
 
                     for ext in dic['enabled']:
 
-                        win.add(" - {}: {}".format(ext.name, ext.description), output=self.out)
+                        win.add(" - {}: {}".format(ext.name, ext.description), prefix=self.out)
 
-                    win.add("[Disabled Extensions:]", output=self.out)
+                    win.add("[Disabled Extensions:]", prefix=self.out)
 
                     for ext in dic['disabled']:
 
                         win.add(" - {}: {}".format(ext.name, ext.description))
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
                     return True
 
@@ -497,7 +497,7 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Disabling Extension: {}]".format(val), output=self.out)
+                win.add("[Disabling BaseExtension: {}]".format(val), prefix=self.out)
 
                 # Disabling name
 
@@ -505,12 +505,12 @@ class CoreTools(Extension):
 
                 if ret:
 
-                    win.add("[Successfully Disabled Extension: {}]".format(val), output=self.out)
+                    win.add("[Successfully Disabled BaseExtension: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to disable extension: {}]".format(val), output=self.out)
-                win.add("[Check usage logs more more details]", output=self.out)
+                win.add("[Failed to disable extension: {}]".format(val), prefix=self.out)
+                win.add("[Check usage logs more more details]", prefix=self.out)
 
                 return True
 
@@ -524,7 +524,7 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Enabling Extension: {}]".format(val), output=self.out)
+                win.add("[Enabling BaseExtension: {}]".format(val), prefix=self.out)
 
                 # Enabling name
 
@@ -532,12 +532,12 @@ class CoreTools(Extension):
 
                 if ret:
 
-                    win.add("[Successfully Enabled Extension: {}]".format(val), output=self.out)
+                    win.add("[Successfully Enabled BaseExtension: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to enable extension: {}]".format(val), output=self.out)
-                win.add("[Check usage logs more more details]", output=self.out)
+                win.add("[Failed to enable extension: {}]".format(val), prefix=self.out)
+                win.add("[Check usage logs more more details]", prefix=self.out)
 
                 return True
 
@@ -549,8 +549,8 @@ class CoreTools(Extension):
 
                 # User wants to reload personalities
 
-                win.add("[Reloading and reconfiguring personalities]", output=self.out)
-                win.add("[Please wait...]", output=self.out)
+                win.add("[Reloading and reconfiguring personalities]", prefix=self.out)
+                win.add("[Please wait...]", prefix=self.out)
 
                 val = self.chas.person.parse_personalities()
 
@@ -558,14 +558,14 @@ class CoreTools(Extension):
 
                     # Successfully parsed personalities
 
-                    win.add("[Task Completed Successfully]", output=self.out)
+                    win.add("[Task Completed Successfully]", prefix=self.out)
 
                     return True
 
                 # Did not complete task
 
-                win.add("[Task Failed]", output=self.out)
-                win.add("[Check usage logs for more information]", output=self.out)
+                win.add("[Task Failed]", prefix=self.out)
+                win.add("[Check usage logs for more information]", prefix=self.out)
 
                 return True
 
@@ -598,16 +598,16 @@ class CoreTools(Extension):
 
                     # User wants text-based output
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
-                    win.add("[Available Personalities:]", output=self.out)
+                    win.add("[Available Personalities:]", prefix=self.out)
 
                     for per in dic:
 
                         win.add(" - {}: {} {}".format(per.name, per.description,
-                                                      ("< Selected" if per.selected else '')), output=self.out)
+                                                      ("< Selected" if per.selected else '')), prefix=self.out)
 
-                    win.add("+==================================================+", output=self.out)
+                    win.add("+==================================================+", prefix=self.out)
 
                     return True
 
@@ -621,18 +621,18 @@ class CoreTools(Extension):
 
                 val = mesg[index:]
 
-                win.add("[Selecting personality: {}]".format(val), output=self.out)
+                win.add("[Selecting personality: {}]".format(val), prefix=self.out)
 
                 ret = self.chas.person.select(val)
 
                 if ret:
 
-                    win.add("[Successfully selected personality: {}]".format(val), output=self.out)
+                    win.add("[Successfully selected personality: {}]".format(val), prefix=self.out)
 
                     return True
 
-                win.add("[Failed to select personality: {}]".format(val), output=self.out)
-                win.add("[See usage logs for more details]", output=self.out)
+                win.add("[Failed to select personality: {}]".format(val), prefix=self.out)
+                win.add("[See usage logs for more details]", prefix=self.out)
 
                 return True
 

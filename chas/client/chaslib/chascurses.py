@@ -655,7 +655,7 @@ Type 'help' for more details
         self.banner.addstr(1, 0, "Welcome to the C.H.A.S Text Interface System!")
         self.banner.addstr(2, 0, "Type 'help' for information on available commands")
         self.banner.addstr(3, 0, "Plugins Loaded: {}".format(len(self.chas.extensions.get_extensions()['enabled'])))
-        self.banner.addstr(4, 0, "Personality Loaded: {}".format(self.chas.person.selected.name))
+        self.banner.addstr(4, 0, "BasePersonality Loaded: {}".format(self.chas.person.selected.name))
 
         self.banner.refresh()
 

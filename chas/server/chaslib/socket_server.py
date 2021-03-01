@@ -5,8 +5,9 @@ import pkgutil
 import inspect
 import queue
 import traceback
+
 from chaslib.socket_lib import CHASocket
-from chaslib.misctools import CHASThreadPoolExecutor
+from chaslib.misctools import CHASThreadPoolExecutor, get_logger
 
 # Packet is as follows:
 
@@ -37,6 +38,8 @@ class SocketServer:
         self.write_queue = queue.Queue()  # Write Queue object
         self.pool = CHASThreadPoolExecutor()  # Thread pool executor instance - For running handler code
 
+        self.log = get_logger("CORE:NET")
+
     def _start_socket(self):
 
         # Starting a listening socket for accepting new connections
@@ -47,7 +50,9 @@ class SocketServer:
 
         self.sock.bind((self.host, self.port))
         self.sock.listen()
-        print(f"Listening on: {self.host}:{self.port}")
+
+        self.log.debug(f"Listening on: {self.host}:{self.port}")
+
         self.sock.setblocking(False)
         self.sel.register(self.sock, selectors.EVENT_READ, data=None)
 
@@ -56,7 +61,9 @@ class SocketServer:
         # Creating socket and registering it with the selector:
 
         conn, addr = sock.accept()
-        print(f"Accepted connection from: {addr}")
+
+        self.log.debug(f"Accepted connection from: {addr}")
+
         conn.setblocking(False)
         message = CHASocket(self.sel, conn, addr)
         self.sel.register(conn, selectors.EVENT_READ, data=message)
@@ -99,14 +106,15 @@ class SocketServer:
 
                     except Exception as e:
 
-                        print(f"An error occurred during event loop: {e}")
-                        traceback.print_exc()
+                        self.log.error("Error during socket event loop: {}".format(e))
+
+                        self.log.debug("Traceback: \n{}".format(traceback.format_exc()))
                         message.close()
 
     def _ss_write(self):
 
         """
-        Socket Server listening thread
+        Socket Server writing thread
         """
 
         while True:
@@ -133,7 +141,6 @@ class SocketServer:
             dev = self.chas.devices.get_by_uuid(uuid)
 
             # Writing data to device
-
 
             dev.sock.write(data)
 
@@ -179,6 +186,8 @@ class SocketServer:
 
         # Joining listening thread
 
+        self.log.debug("Stopping listening thread...")
+
         self.listen_thread.join()
 
         # Adding 'None' to write queue to kill write thread
@@ -187,9 +196,13 @@ class SocketServer:
 
         # Joining write thread
 
+        self.log.debug("Stopping write thred...")
+
         self.write_thread.join()
 
         # Shutting down handel thread
+
+        self.log.debig("Stopping handler threads...")
 
         self.pool.shutdown()
 
@@ -198,8 +211,6 @@ class SocketServer:
         # Function for parsing and loading ID Handlers
 
         direct = [self.chas.settings.id_dir]
-
-        print("Parsing handlers")
 
         try:
 
@@ -225,7 +236,7 @@ class SocketServer:
 
                             # Chexking for IDHandel parent
 
-                            if 'IDHandle' is parent.__name__:
+                            if 'IDHandle' == parent.__name__:
 
                                 # Binding CHAS to handler
 
