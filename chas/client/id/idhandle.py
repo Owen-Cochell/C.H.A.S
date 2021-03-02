@@ -10,9 +10,18 @@ class IDHandle(object):
         self.description = desc  # Description of the handler
         self.id_num = id_num  # ID number of the handler
 
-    def handel(self, dev, data):
+    def handel_server(self, dev, data):
 
         pass
+
+    def handel_client(self, dev, data):
+
+        """
+        Simply re-directs the content to the handle_server() function,
+        if our operation is not specified.
+        """
+
+        self.handel_server(dev, data)
 
     def set_chas(self, chas):
 

@@ -39,7 +39,7 @@ class SpecialHandel(IDHandle):
                 'content-type': content_type,
                 'content': dev.queue}
 
-    def handel(self, device, data):
+    def handel_server(self, device, data):
 
         content_uuid = data['content-uuid']
         content_id = data['content-id']

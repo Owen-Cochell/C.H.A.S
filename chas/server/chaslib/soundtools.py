@@ -16,7 +16,7 @@ class Listener:
 
     """
     CHAS Listener class
-    Manages Microphone and Recogniser classes
+    Manages Microphone and Recognizer classes
     Maintains an internal state of weather it's listening or not, to prevent "Dual Listening"
     """
 
@@ -32,7 +32,7 @@ class Listener:
         self.mic = sr.Microphone()  # TODO: Setup microphone selection
         self.wake = Event()  # Event determining if we have a wake word event
         self.pause = Event()  # Event determining if we are paused(True means we are not paused
-        self.sphinx = True  # Boolean determining if we recognise with the offline engine
+        self.sphinx = True  # Boolean determining if we recognize with the offline engine
 
         self.pause.set()
         self.wake.clear()

@@ -1,6 +1,6 @@
 
 from id.idhandle import IDHandle
-from chaslib.device import Device
+from chaslib.device import Device, Server
 
 # ID Handel for authentication actions
 
@@ -17,7 +17,7 @@ class AuthHandel(IDHandle):
 
         return 1
 
-    def handel(self, sock, data):
+    def handel_server(self, sock, data):
 
         # Handel method for Authentication
 
@@ -46,3 +46,29 @@ class AuthHandel(IDHandle):
         dev.send({'auth': True, 'uuid': str(dev.uuid)}, 1)
 
         return
+
+    def handel_server(self, sock, data):
+
+        # Checking if auth was successful...
+
+        if data['auth']:
+
+            # Auth was successful!
+
+            # Creating new server object...
+
+            addr = sock.addr
+
+            sev = Server(self.chas, addr[0], addr[1], sock, data['uuid'])
+
+            # Setting server object in CHAS lib
+
+            self.chas.server = sev
+
+            return
+
+        else:
+
+            # Auth failed.
+
+            return

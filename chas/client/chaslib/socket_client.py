@@ -20,7 +20,7 @@ class SocketClient:
         self.handlers = []  # List of ID handlers
         self.thread = None  # Threading object
 
-    def start_socket_client(self):
+    def start(self):
 
         # Function for starting the Socket Client
 
@@ -34,7 +34,7 @@ class SocketClient:
 
         return
 
-    def stop_socket_client(self):
+    def stop(self):
 
         self.running = False
 
