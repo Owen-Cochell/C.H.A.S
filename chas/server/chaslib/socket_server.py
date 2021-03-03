@@ -162,15 +162,21 @@ class SocketServer:
 
         self.running = True
 
+        self.log.debug("Parsing and loading handlers...")
+
         self.parse_handlers()
 
         # Defining listener thread
+
+        self.log.debug("Starting listening thread...")
 
         self.listen_thread = threading.Thread(target=self._ss_listener)
         self.listen_thread.daemon = True
         self.listen_thread.start()
 
         # Defining write thread:
+
+        self.log.debug("Starting write thread...")
 
         self.write_thread = threading.Thread(target=self._ss_write)
         self.write_thread.daemon = True
@@ -301,6 +307,7 @@ class SocketClient:
 
         self.chas = chas  # CHAS Instance
         self.running = False  # Value determining if the Socket Client is running
+        self.connected = False  # Value determining if we are connected to the server
         self.host = host  # Hostname of the CHAS server
         self.port = port  # Port num of the CHAS server
         self.sel = selectors.DefaultSelector()
@@ -308,13 +315,19 @@ class SocketClient:
         self.handlers = []  # List of ID handlers
         self.thread = None  # Threading object
 
+        self.log = get_logger("CORE:NET")
+
     def start(self):
 
         # Function for starting the Socket Client
 
         self.running = True
 
+        self.log.debug("Parsing and loading handlers...")
+
         self.parse_handlers()
+
+        self.log.debug("Starting listen thread...")
 
         self.thread = threading.Thread(target=self._sc_event_loop)
         self.thread.daemon = True

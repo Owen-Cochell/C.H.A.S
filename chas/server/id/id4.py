@@ -1,20 +1,20 @@
 # ID Handler for network audio streaming
 
 from id.idhandle import IDHandle
-from chaslib.soundtools import RawAudio
-import base64
+from chaslib.sound.out import NetModule
+from chaslib.sound.input import NetReader
 
 
 class AudioStream(IDHandle):
 
     def __init__(self):
 
-        super(AudioStream, self).__init__('Audio Streamer(Client)',
+        super(AudioStream, self).__init__('Audio Streamer',
                                           'Handler for audio streaming',
                                           4)
+
         self.stream = None  # Instance of our stream
         self.chunk = 0  # Chunksize of data to read
-        self.min_buff = 3  # How big the buffer should be before we play, to prevent skips
 
     def handel_client(self, dev, data):
 
@@ -41,43 +41,49 @@ class AudioStream(IDHandle):
 
             self._stop_stream()
 
+    def stop(self):
+
+        """
+        Called when we are removed from the networking component.
+
+        This might occur if the instance does not want audio streaming enabled.
+
+        We stop and remove the NetReader from the OutputHandler and quit.
+        """
+
+        # Stop the NetReader:
+
+        self._stop_stream()
+
     def _read_stream(self, data):
 
-        # Read from audio stream
+        """
+        Send the given audio information to the NetReader.
 
-        #print(f"Writing audio data: {data}")
+        We let the NetReader do all the decoding and conversion.
+        """
 
-        self.stream.write(base64.b64decode(data))
+        self.stream.put(data)
 
     def _start_stream(self, data):
 
-        # Method for starting and configuring audio stream
+        """
+        We start the audio stream on the client.
 
-        self.chunk = data['chunk']
+        This simply means we create and add an NetReader module to the OutputHandler.
+        We will then procede to pass audio information to them.
+        """
 
-        self.stream = RawAudio(
+        # Create and add the NetReader:
 
-            self.chas,
-            form=data['format'],
-            channels=data['channels'],
-            rate=data['rate'],
-            chunk=self.chunk,
-            min_buff=self.min_buff,
-            size=data['size'],
-            stream=False
-        )
+        self.log.debug("Starting audio stream...")
 
-        self.stream._start()
-
-        return
+        self.stream = self.chas.sound.bind_synth(NetReader())
 
     def _stop_stream(self):
 
         # Method for starting and configuring audio stream
 
-        print("Stopping stream...")
+        self.log.debug("Stopping audio stream...")
 
-        self.chunk = 0
         self.stream.stop()
-
-        return

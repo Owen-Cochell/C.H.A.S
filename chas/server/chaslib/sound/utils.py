@@ -1,5 +1,5 @@
 """
-General utilites for sound processing
+General utilities for sound processing
 """
 
 
@@ -429,7 +429,7 @@ class ModuleInfo:
         self.rate = samp   # Sampling rate of this synth
         self.channels= 1  # Number of channels the synth chain has
         self.running = True  # Value determining if we are running
-
+        self.name = ''  # Meaningful name for this chain
 
 class AudioCollection:
 

@@ -47,7 +47,7 @@ class AuthHandel(IDHandle):
 
         return
 
-    def handel_server(self, sock, data):
+    def handel_client(self, sock, data):
 
         # Checking if auth was successful...
 

@@ -13,20 +13,21 @@
 
 # Importing necessary stuff here:
 
-from chaslib.socket_server import SocketServer
-from chaslib.socket_client import SocketClient
+
+import curses
+import threading
+
+from chaslib.socket_server import SocketServer, SocketClient
 from chaslib.device import Devices
 from chaslib.extension import Extensions
 from settings import Settings
 from chaslib.soundtools import Listener, Speaker
+from chaslib.sound.base import OutputHandler
+from chaslib.sound.out import PyAudioModule
 from chaslib.chascurses import ChatWindow
 from chaslib.resptools import Personalities
-
 from chaslib.misctools import set_chas, get_logger
 
-import curses
-import threading
-import logging
 
 # These variables are not to be touched!
 
@@ -67,8 +68,8 @@ class CHASBase:
         self.exit = 'exit'  # Exit keyword, for exiting chas
         self.chat = None  # CHAS chat window
         self.log = None  # Logging object
+        self.sound = OutputHandler()  # Output handler object
 
-        self.server = False  # Value determining if we are a server
         self.client = False  # Value determining if we are a client
 
         self.net = None  # Networking system to use - Should be overridden by child class
@@ -96,11 +97,13 @@ class CHASBase:
 
         val = self.extensions.parse_extensions()
 
+        # Loading relevant audio modules to the OutputHandler
+
         # Starting the socket server
 
         self.log.info("Starting networking...")
 
-        self.network.start()
+        self.net.start()
 
         # Parsing and loading personalities
 
@@ -130,7 +133,7 @@ class CHASBase:
 
         self.log.info("Stopping socketserver and networking...")
 
-        self.socket_server.stop()
+        self.net.stop()
 
         # Stopping listening service:
 
@@ -266,13 +269,14 @@ class CHASServer(CHASBase):
 
         super().__init__()
 
-        # Define our networking:
-
-        self.net = SocketServer()
-
         # Define our device handler:
 
         self.devices = Devices(self)
+
+        # Define our networking:
+
+        self.net = SocketServer(self, self.settings.host, self.settings.port)
+
 
 class CHASClient(CHASBase):
 
@@ -291,6 +295,8 @@ class CHASClient(CHASBase):
 
         super().__init__()
 
+        self.client = True
+
         # Define our server object:
 
         self.server = None  # CHAS server object
@@ -304,6 +310,6 @@ if __name__ == "__main__":
 
     # Execute file as script
 
-    chas = CHAS()
+    chas = CHASServer()
 
     chas.main()

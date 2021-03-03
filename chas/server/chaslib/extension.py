@@ -1,10 +1,13 @@
 # This file contains a C.H.A.S extension mold
 
+from chaslib.device import Devices
+from chaslib.sound.base import OutputHandler
+from chaslib.resptools import keyword_find, key_sta_find, string_clean
+from chaslib.misctools import get_logger
+
 import os
 import pkgutil
 import inspect
-from chaslib.resptools import keyword_find, key_sta_find, string_clean
-from chaslib.misctools import get_logger
 
 
 class BaseExtension(object):
@@ -27,8 +30,8 @@ class BaseExtension(object):
 
         """
         Binds CHAS masterclass to the extension
+
         :param chas: Instance of CHAS Masterclass
-        :return:
         """
 
         self.chas = chas
@@ -37,7 +40,8 @@ class BaseExtension(object):
 
         """
         Default match method for extensions
-        Should be overidden in the child class
+        Should be overridden in the child class.
+
         :param mesg: Message to be processed
         :param talk: Boolean determining if we are talking
         :param win: CHAS window object
@@ -51,7 +55,6 @@ class BaseExtension(object):
         """
         Parent function called when the extension is enabled
         Defined here in case user does not provide start method
-        :return:
         """
 
         pass
@@ -61,7 +64,6 @@ class BaseExtension(object):
         """
         Parent function called when extension is disabled
         Defined here in case user does not provide start method
-        :return:
         """
 
         pass
@@ -71,7 +73,6 @@ class BaseExtension(object):
         """
         Parent function called when the extension is first loaded,
         regardless of weather it's being enabled or disabled.
-        :return:
         """
 
         pass
@@ -80,7 +81,7 @@ class BaseExtension(object):
 
         """
         Method called when the extension is removed from our cache.
-        This is the final method that will be called before the function is removed via garbage collection.
+        This is the final method that will be called before the extension is removed via garbage collection.
 
         The function should finish up everything that the extension is doing.
         'stop()' will always be called before this function is called.
@@ -94,6 +95,7 @@ class BaseExtension(object):
         Adds an entry to the help menu of the extension.
         Ideally, this should display relevant keywords or commands that
         your plugin looks for, and should display some usage information.
+
         :param name: Name of the command to register
         :param desc: Description of the command to register
         :param usage: Usage of the command to register
@@ -311,11 +313,11 @@ class Extensions:
     def handel(self, sent, talk, win):
 
         """
-        Query Extensions for handling of user given text
+        Query Extensions for handling of user given text.
+
         :param sent: Sentence typed/spoken by user
         :param win: CHAS chat window object to write to
         :param talk: Boolean determining if user is talking
-        :return:
         """
 
         # Checking CORE features first
@@ -464,7 +466,8 @@ class Extensions:
 
         """
         Gets extension priority
-        To be used by the sorting method in 'parse_extensions()'
+        To be used by the sorting method in 'parse_extensions()'.
+
         :param ext: BaseExtension instance
         :return: Extension priority
         :rtype: int
@@ -485,11 +488,13 @@ class CoreTools(BaseExtension):
 
         super(CoreTools, self).__init__('CoreTools', 'CHAS Core Tools', priority=-1)
         self.out = 'CORE:TOOLS'
+        self.sep = "+==================================================+"  # Seperator for text
 
     def handel(self, mesg, talk, win):
 
         """
-        Handels input from user
+        Handels input from user.
+
         :param mesg: Input from us er
         :param talk: Boolean determining if we are talking
         :param win: Output object
@@ -728,6 +733,115 @@ class CoreTools(BaseExtension):
                 win.add("[See usage logs for more details]", prefix=self.out)
 
                 return True
+
+        if keyword_find(mesg, ['net']):
+
+            # Dealing with networking
+
+            if keyword_find(mesg, 'status'):
+
+                # Get stats from networking component:
+
+                host = self.chas.net.host
+                port = self.chas.net.port
+
+                if self.chas.server:
+
+                    if talk:
+
+                        # Lets say out loud
+
+                        win.add("Stats for socket server")
+                        win.add("Listening on host {} on port {}".format(host, port))
+                        win.add("{} clients connected".format(len(self.chas.devices)))
+
+                        return
+
+                    # Lets print to the terminal:
+
+                    win.add(self.sep, prefix=self.out)
+                    win.add("[Socket Server Stats:]", prefix=self.out)
+                    win.add(" - Hostname: {}".format(host), prefix=self.out)
+                    win.add(" - Port: {}".format(port), prefix=self.out)
+                    win.add(" - Clients Connected: {}".format(len(self.chas.devices)), prefix=self.out)
+                    win.add(self.sep, prefix=self.out)
+
+                    return
+
+                # Working with a client:
+
+                if talk:
+
+                    # Lets say out loud
+
+                    win.add("Stats for socket client")
+                    
+                    if self.chas.server is None:
+
+                        # We are not connected:
+
+                        win.add("Socket client is not connected")
+
+                    else:
+
+                        win.add("Socket client is connected")
+                    
+                    win.add("Server address is {}".format(self.chas.net.hostname))
+                    win.add("Server port is {}".format(self.chas.net.port))
+
+                    return
+
+                # Lets print out to terminal:
+
+                win.add(self.sep, prefix=self.out)
+                win.add("[Socket Client Stats:]", prefix=self.out)
+                win.add("[Connected: {}]".format(self.chas.server is not None), prefix=self.out)
+                win.add(" - Address: {}".format(host), prefix=self.out)
+                win.add(" - Port: {}".format(port), prefix=self.out)
+                win.add(self.sep, prefix=self.out)
+
+                return
+
+        if keyword_find(mesg, ['audio']):
+
+            # Dealing with audio commands
+
+            if keyword_find(mesg, ['list']):
+
+                # User wants a list of all audio nodes:
+
+                nodes = self.chas.sound._input._objs
+
+                if talk:
+
+                    # We are talking, lets give a concice list:
+
+                    win.add("Connected audio nodes")
+
+                    for node in nodes:
+
+                        win.add("{} with name {}".format(type(node), node.name))
+
+                    return
+
+                # Lets provide a textual representation of the audio:
+
+                win.add(self.sep, prefix=self.out)
+                win.add("[Connected audio nodes:]", prefix=self.out)
+                
+                if not nodes:
+
+                    # No nodes loaded! Lets print that
+
+                    win.add("No audio nodes loaded!", prefix=self.out)
+
+                for node in nodes:
+
+                    win.add(" - [{}]: {}".format(type(node), node.name), prefix=self.out)
+
+                win.add(self.sep, prefix=self.out)
+
+                return
 
         if 'help ' == string_clean(mesg):
 

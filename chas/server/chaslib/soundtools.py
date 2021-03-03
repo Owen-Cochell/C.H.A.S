@@ -547,7 +547,7 @@ class NetAudio:
             # Calculate how many iterations we must do to reach the end:
 
             self.iter = ceil(self.size / self.chunk)
-
+ 
         self._write(self._gen_starter_payload())
 
         self.thread = Thread(target=self._event_loop)

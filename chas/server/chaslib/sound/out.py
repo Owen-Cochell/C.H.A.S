@@ -26,8 +26,11 @@ import queue
 import wave
 import pathlib
 
+from base64 import b64encode
+
 from chaslib.sound.convert import BaseConvert, NullConvert, Float32, Int16
 from chaslib.sound.utils import amp_clamp
+from chaslib.misctools import get_chas
 
 
 class BaseOutput(object):
@@ -588,3 +591,132 @@ class PyAudioModule(BaseOutput):
             # Send them to PyAudio
 
             self.stream.write(frames)
+
+
+class NetModule(BaseOutput):
+
+    """
+    Netmodule - Sends audio information to all connected clients.
+
+    For this module to work, out networking component MUST be the socket server.
+    We will check to make sure we are a server before instanciating,
+    and will raise an exception if we are not.
+
+    We will stream frames to the clients as we receive them.
+    It is up to the client to build a buffer of information,
+    as this implementation is the fastest as of now.
+
+    We prepare and send the network packets ourselves,
+    and we utilise the CHAS streaming protocol, 
+    outlined in 'id4.py'.
+
+    All audio frames received are encoded in base64 and sent.
+    We encode the floats in int16 format to ensure that packet length does not get too high.
+    """
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.chas = get_chas()  # Get our CHAS instance
+
+        # Check if we are a server:
+
+        if self.chas.client:
+
+            # We are a client raise an exception
+
+            raise Exception("Must be server instance, not client!")
+
+        # Load an int16 converter:
+
+        self.add_converter(Int16())
+
+    def _gen_starter_payload(self):
+
+        """
+        Generates a starter payload,
+        which prepares the client to receive information.
+
+        :return: Dictionary contaning starting payload
+        :rtype: dict
+        """
+
+        return {'id': 0, 'data': None}
+
+    def _gen_data_payload(self, data):
+
+        """
+        Generates a data payload based upon the given data.
+
+        We encode the data in base64 format to ensure it can be transported via socket.
+
+        :return: Data payload
+        :rtype: dict
+        """
+
+        b64_bytes = b64encode(data)
+
+        b64_string = b64_bytes.decode('utf-8')
+
+        return {'id': 1, 'data': b64_string}
+
+    def _gen_stop_payload(self):
+
+        """
+        Generates a stop payload,
+        which tells the client that this stream is over.
+
+        :return: Stop payload
+        :rtype: dict
+        """
+
+        return {'id': 2, 'data': None}
+
+    def _write(self, data):
+
+        """
+        Sends the given data to all clients.
+
+        Weather to listen or not is up to them.
+        """
+
+        for dev in self.chas.devices:
+
+            dev.send(data, 4)
+
+    def start(self):
+
+        """
+        Start method for the network streamer.
+
+        We create and send a streaming start packet to all clients.
+        """
+
+        # Create and send the start packet:
+
+        self._write(self._gen_starter_payload())
+
+    def stop(self):
+
+        """
+        Stop method for the network streamer.
+
+        We create and send a stop packet to all clients.
+        """
+
+        # Create and send the stop packet:
+
+        self._write(self._gen_stop_payload())
+
+    def run(self):
+
+        """
+        Run method for the NetworkStreamer.
+        """
+
+        while self.running:
+
+            # Get and send a frame to the clients:
+
+            self._write(self._gen_data_payload(self.get_sample()))

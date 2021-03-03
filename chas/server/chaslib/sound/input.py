@@ -13,8 +13,12 @@ and getting information from a network stream,
 as this is the most relevant operation at this time.
 """
 
+from os import sep
 import pathlib
 import wave
+import queue
+
+from base64 import b64decode
 
 from chaslib.sound.convert import Int8, Int16, Int32, Float32, NullConvert, BaseConvert
 from chaslib.sound.utils import BaseModule
@@ -240,7 +244,7 @@ class WaveReader(BaseInput):
 
         super().__init__()
 
-        self.path = self.path = str(pathlib.Path(path).resolve())
+        self.path = self.path = pathlib.Path(path).resolve()
         self.wave = None  # Wave file instance
 
     def start(self):
@@ -252,7 +256,11 @@ class WaveReader(BaseInput):
 
         # Load the wave file:
 
-        self.wave = wave.open(self.path, 'rb')
+        self.wave = wave.open(str(self.path), 'rb')
+
+        # Set the name of this chin to the name of the file:
+
+        self.info.name = self.path.name
 
         # Set the number of channels:
 
@@ -292,3 +300,54 @@ class WaveReader(BaseInput):
         # Get and return:
 
         return self.wave.readframes(1)
+
+
+class NetReader(BaseInput):
+
+    """
+    NetReader - Reads audio frames given to us by the CHAS server.
+
+    We expect information in Base64 format, and those bytes to be Int16.
+    We will decode the incoming bytes, convert them to floats, and pass them along.
+
+    IDHandler4 handles the process of creating us, and adding audio information to our queue.
+    We really don't do much, we just react to IDHandler4 and pass information along.
+    """
+
+    def __init__(self) -> None:
+
+        super().__init__()
+
+        self.queue = queue.Queue()  # Queue instance audio information is stored in
+        self.allow_repeat = False  # Disable repetition
+        self.info.name = "Network Audio Stream"
+
+        self.bind_converter(Int16())
+
+    def put(self, data):
+
+        """
+        Adds the given input to the audio queue.
+
+        This should primarily be used by the IDHandler4,
+        as that component handles getting and routing audio information.
+
+        The given data should be exactly ONE frame of audio information. 
+        """
+
+        # Put the data into the queue
+
+        self.queue.put(data)
+
+    def get_next(self):
+
+        """
+        Gets the next value from our queue, decodes it, and sends it along.
+
+        :return: Byte representation of the frame
+        :rtype: bytes
+        """
+
+        # Decode and return our bytes:
+
+        return b64decode(self.queue.get())
