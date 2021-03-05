@@ -292,8 +292,6 @@ class SocketServer:
             req_id = data['id']
             content = data['content']
 
-            self.log.info("Received {} from {} ".format(data, sock))
-
             if uuid is None and sock.device_uuid is None and req_id == 1:
 
                 # Device is attempting to authenticate
@@ -481,8 +479,6 @@ class SocketClient:
             hand = self.handlers[req_id]
             server = self.chas.server
 
-            self.log.info("Received data {}".format(data))
-
             if req_id == 1:
 
                 # Authenticating...
@@ -496,3 +492,5 @@ class SocketClient:
         except Exception as e:
 
             self.log.warn("Error occurred during handle method: {}".format(e))
+            self.log.warn("Closing socket: [{}:{}]".format(self.host, self.port))
+            sock.close()

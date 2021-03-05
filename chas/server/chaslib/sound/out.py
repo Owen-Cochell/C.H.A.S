@@ -684,6 +684,8 @@ class NetModule(BaseOutput):
 
         # Create and send the start packet:
 
+        self.log.info("Sending starter packet...")
+
         self._write(self._gen_starter_payload())
 
     def stop(self):
@@ -695,6 +697,8 @@ class NetModule(BaseOutput):
         """
 
         # Create and send the stop packet:
+
+        self.log.info("Sending stop packet")
 
         self._write(self._gen_stop_payload())
 
@@ -708,7 +712,7 @@ class NetModule(BaseOutput):
 
             # Get and send a frame to the clients:
 
-            samp = self.get_samples(1024)
+            samp = self.get_samples(2024, raw=True)
 
             if samp is None:
 

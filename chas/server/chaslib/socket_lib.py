@@ -34,7 +34,7 @@ class CHASocket:
         # Read a specified amount of bytes
 
         data = b''
-        orig = byts
+        orig = int(byts)
 
         while True:
 
@@ -52,18 +52,13 @@ class CHASocket:
 
                 # Check how many bytes we have read - Prevents Socket Drift:
 
-                byts = byts - len(data)
-
-                self.log.info("We read: {}".format(len(data)))
-                self.log.info("Now reading: {}".format(byts))
+                byts = orig - len(data)
 
                 if len(data) == orig:
 
                     # We are done lets break:
 
                     break
-
-        self.log.info("Excpected: {} Read: {}".format(byts, len(data)))
 
         return data
 
@@ -170,8 +165,6 @@ class CHASocket:
                 if reqhd not in self._jsonheader:
 
                     raise Exception("Malformed JSON Header!")
-
-        self.log.debug("Reading {} bytes!".format(self._jsonheader['content-length']))
 
         return
 

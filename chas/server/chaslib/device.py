@@ -27,9 +27,9 @@ class Device:
                 'uuid': self.uuid,
                 'content': content}
 
-        #self.chas.net.write(data, self.uuid)
+        self.chas.net.write(data, self.uuid)
 
-        self.sock.write(data)
+        #self.sock.write(data)
 
     def get(self, content, id_num, encoding='utf-8'):
 

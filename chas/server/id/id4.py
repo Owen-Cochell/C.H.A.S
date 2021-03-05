@@ -23,7 +23,7 @@ class AudioStream(IDHandle):
         id_num = data['id']
         contents = data['data']
 
-        if self.allow_stream:
+        if not self.allow_stream:
 
             # We are not allowing streaming, lets drop the packet
 
@@ -46,6 +46,8 @@ class AudioStream(IDHandle):
         if id_num == 2:
 
             # Server wants to stop audio stream
+
+            self.log.info("Stopping audio stream...")
 
             self._stop_stream()
 
@@ -72,6 +74,8 @@ class AudioStream(IDHandle):
 
         This is also called by CoreTools when client streaming is disabled.
         """
+
+        self.log.debug("Stopping network stream...")
 
         self.allow_stream = False
 
@@ -107,6 +111,8 @@ class AudioStream(IDHandle):
         self.stream = NetReader()
 
         self.control = self.chas.sound.bind_synth(self.stream)
+
+        self.control.start()
 
     def _stop_stream(self):
 

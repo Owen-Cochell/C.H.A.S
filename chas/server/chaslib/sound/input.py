@@ -22,6 +22,7 @@ from base64 import b64decode
 
 from chaslib.sound.convert import Int8, Int16, Int32, Float32, NullConvert, BaseConvert
 from chaslib.sound.utils import BaseModule
+from chaslib.misctools import get_logger
 
 
 class BaseInput(BaseModule):
@@ -64,6 +65,8 @@ class BaseInput(BaseModule):
         self.length = None  # Length of the audio information
         self.loop = False  # Value determining if we should repeat
         self.allow_repeat = True  # Value determining if we should allow repeats
+
+        self.log = get_logger("BaseReader")
 
     def bind_converter(self, conv):
 
@@ -200,7 +203,7 @@ class BaseInput(BaseModule):
 
         val = self.get_next()
 
-        if type(val) != bytes:
+        if type(val) != bytes and type(self.convert) != NullConvert:
 
             # We must work with bytes! Lets exit, as we are probably done:
 
@@ -209,6 +212,8 @@ class BaseInput(BaseModule):
             return 0
 
         # Split val in half:
+
+        split = []
 
         split = [val[:self.convert.width], val[self.convert.width:]]
 
@@ -222,7 +227,9 @@ class BaseInput(BaseModule):
 
         self.index += 1
 
-        return self.convert.revert(split[0])
+        final =  self.convert.revert(split[0])
+
+        return final
 
 
 class WaveReader(BaseInput):
@@ -307,8 +314,8 @@ class NetReader(BaseInput):
     """
     NetReader - Reads audio frames given to us by the CHAS server.
 
-    We expect information in Base64 format, and those bytes to be Int16.
-    We will decode the incoming bytes, convert them to floats, and pass them along.
+    Because we receive information in float format,
+    we can simply pass the content along without any extra conversion!
 
     IDHandler4 handles the process of creating us, and adding audio information to our queue.
     We really don't do much, we just react to IDHandler4 and pass information along.
@@ -321,8 +328,14 @@ class NetReader(BaseInput):
         self.queue = queue.Queue()  # Queue instance audio information is stored in
         self.allow_repeat = False  # Disable repetition
         self.info.name = "Network Audio Stream"
+        self.info.channels = 2
 
-        self.bind_converter(Int16())
+        self.frames = None  # Tuple of frames to return
+        self.index_val = 0  # Index of the frame data we are on
+
+        self.log = get_logger("NetReader")
+
+        self.bind_converter(NullConvert())
 
     def put(self, data):
 
@@ -348,6 +361,24 @@ class NetReader(BaseInput):
         :rtype: bytes
         """
 
-        # Decode and return our bytes:
+        # CHeck if our index is valid:
 
-        return b64decode(self.queue.get())
+        if self.frames is None or self.index_val == len(self.frames):
+
+            # Clear our frame info:
+
+            self.frames = self.queue.get()
+
+            self.index_val = 0
+
+        # Get the frame:
+
+        frame = self.frames[self.index_val]
+
+        # Increment our index:
+
+        self.index_val += 1
+
+        # Return:
+
+        return frame

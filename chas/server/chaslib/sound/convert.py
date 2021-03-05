@@ -98,7 +98,7 @@ class NullConvert(BaseConvert):
     def __init__(self):
         super().__init__()
 
-        self.width = 0  # Set our width
+        self.width = 1  # Set our width
 
     def convert(self, inp):
         
@@ -119,6 +119,12 @@ class NullConvert(BaseConvert):
         :return: Bytes input
         :rtype: bytes
         """
+
+        if type(inp) in [list, tuple]:
+
+            # Return the 0 index:
+
+            return inp[0]
 
         return inp
 

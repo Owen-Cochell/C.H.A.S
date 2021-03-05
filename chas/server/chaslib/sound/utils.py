@@ -3,6 +3,7 @@ General utilities for sound processing
 """
 
 
+from chaslib.misctools import get_logger
 import time
 
 from collections import deque
@@ -430,6 +431,7 @@ class ModuleInfo:
         self.channels= 1  # Number of channels the synth chain has
         self.running = True  # Value determining if we are running
         self.name = ''  # Meaningful name for this chain
+
 
 class AudioCollection:
 

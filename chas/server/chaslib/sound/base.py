@@ -16,10 +16,10 @@ The design of the output class is heavily structured for sequencer use,
 but you could script synth output using certain features located in OutputControl.
 """
 
+from chaslib.misctools import get_logger
 import threading
-import multiprocessing
-import time
 from concurrent.futures import ThreadPoolExecutor
+import traceback
 
 from chaslib.sound.utils import BaseModule, AudioMixer, get_time
 from chaslib.sound.out import BaseOutput
@@ -85,6 +85,8 @@ class OutputControl(BaseModule):
 
         self.time_remove = 0
         self.item_written = 0
+
+        self.log.info("Stopping audio node")
 
         # Stop the chain:
 
@@ -230,6 +232,8 @@ class OutputHandler:
 
         self.run = False  # Value determining if we are running
         self._pause = threading.Event()  # Event object determining if we are paused
+
+        self.log = get_logger("AUDIO")
 
         self._pause.set()
 
@@ -417,7 +421,15 @@ class OutputHandler:
 
             # Get some audio information:
 
-            inp = next(self._input)
+            try:
+
+                inp = next(self._input)
+
+            except Exception as e:
+
+                self.log.warning("Getting next value failed: {}".format(e))
+                self.log.debug("Traceback: \n{}".format(traceback.format_exc()))
+
 
             if inp is None:
 
