@@ -13,7 +13,7 @@ And includes support for CHAS device objects.
 
 class CHASocket:
 
-    def __init__(self, selector, sock, addr):
+    def __init__(self, selector, sock, addr, log):
 
         self.sel = selector  # Selector object
         self.sock = sock  # Socket object
@@ -23,6 +23,8 @@ class CHASocket:
         self.content = None  # Decoded content of the response
         self.__dev = None  # UUID of device socket is binded to, allows for high level CHAS socket management
 
+        self.log = log
+
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 32000)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 32000)
         self.sock.settimeout(5)
@@ -31,16 +33,37 @@ class CHASocket:
 
         # Read a specified amount of bytes
 
-        data = None
+        data = b''
+        orig = byts
 
-        try:
+        while True:
 
-            data = self.sock.recv(byts)
+            try:
 
-        except BlockingIOError:
+                data = data + self.sock.recv(byts)
 
-            # Resource temporarily unavailable!
-            pass
+            except BlockingIOError:
+
+                # Resource temporarily unavailable!
+
+                self.log.info("Socket temporarily unavailable!")
+
+            finally:
+
+                # Check how many bytes we have read - Prevents Socket Drift:
+
+                byts = byts - len(data)
+
+                self.log.info("We read: {}".format(len(data)))
+                self.log.info("Now reading: {}".format(byts))
+
+                if len(data) == orig:
+
+                    # We are done lets break:
+
+                    break
+
+        self.log.info("Excpected: {} Read: {}".format(byts, len(data)))
 
         return data
 
@@ -94,14 +117,20 @@ class CHASocket:
 
         # Decode message in JSON
 
-        tiow = io.TextIOWrapper(
-            io.BytesIO(json_bytes), encoding=encoding, newline=""
-        )
+        try:
 
-        obj = json.load(tiow)
-        tiow.close()
+            tiow = io.TextIOWrapper(
+                io.BytesIO(json_bytes), encoding=encoding, newline=""
+            )
 
-        return obj
+            obj = json.load(tiow)
+            tiow.close()
+
+            return obj
+
+        except Exception as e:
+
+            self.log.error("Error while decoding: {}".format(json_bytes))
 
     def _process_proto_header(self):
 
@@ -142,6 +171,8 @@ class CHASocket:
 
                     raise Exception("Malformed JSON Header!")
 
+        self.log.debug("Reading {} bytes!".format(self._jsonheader['content-length']))
+
         return
 
     def _process_request(self):
@@ -151,12 +182,6 @@ class CHASocket:
         content_len = self._jsonheader["content-length"]
 
         contents = self._read(content_len)
-
-        if not len(contents) >= content_len:
-
-            # Too much data!
-
-            return
 
         encoding = self._jsonheader["content-encoding"]
 

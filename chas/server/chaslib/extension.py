@@ -2,6 +2,7 @@
 
 from chaslib.device import Devices
 from chaslib.sound.base import OutputHandler
+from chaslib.sound.out import NetModule
 from chaslib.resptools import keyword_find, key_sta_find, string_clean
 from chaslib.misctools import get_logger
 
@@ -334,7 +335,18 @@ class Extensions:
 
         for ext in self._enabled_extensions:
 
-            val = ext.match(sent, talk, win)
+            try:
+
+                val = ext.match(sent, talk, win)
+
+            except Exception as e:
+
+                self.log.warn("Exception occurred while handleing [{}]: {}".format(ext.name, e))
+                self.log.warn("Removing extension [{}]...".format(ext.name))
+
+                self.disable_extension(ext.name)
+
+                continue
 
             if val:
 
@@ -458,7 +470,7 @@ class Extensions:
 
             # Something went wrong
 
-            self.log.error("Error occured while trversing: {}".format(e))
+            self.log.error("Error occurred while traversing: {}".format(e))
 
         return True
 
@@ -745,7 +757,7 @@ class CoreTools(BaseExtension):
                 host = self.chas.net.host
                 port = self.chas.net.port
 
-                if self.chas.server:
+                if not self.chas.client:
 
                     if talk:
 
@@ -755,7 +767,7 @@ class CoreTools(BaseExtension):
                         win.add("Listening on host {} on port {}".format(host, port))
                         win.add("{} clients connected".format(len(self.chas.devices)))
 
-                        return
+                        return True
 
                     # Lets print to the terminal:
 
@@ -766,7 +778,7 @@ class CoreTools(BaseExtension):
                     win.add(" - Clients Connected: {}".format(len(self.chas.devices)), prefix=self.out)
                     win.add(self.sep, prefix=self.out)
 
-                    return
+                    return True
 
                 # Working with a client:
 
@@ -789,7 +801,7 @@ class CoreTools(BaseExtension):
                     win.add("Server address is {}".format(self.chas.net.hostname))
                     win.add("Server port is {}".format(self.chas.net.port))
 
-                    return
+                    return True
 
                 # Lets print out to terminal:
 
@@ -800,7 +812,7 @@ class CoreTools(BaseExtension):
                 win.add(" - Port: {}".format(port), prefix=self.out)
                 win.add(self.sep, prefix=self.out)
 
-                return
+                return True
 
         if keyword_find(mesg, ['audio']):
 
@@ -820,9 +832,9 @@ class CoreTools(BaseExtension):
 
                     for node in nodes:
 
-                        win.add("{} with name {}".format(type(node), node.name))
+                        win.add("{} with name {}".format(type(node), node.info.name))
 
-                    return
+                    return True
 
                 # Lets provide a textual representation of the audio:
 
@@ -837,11 +849,89 @@ class CoreTools(BaseExtension):
 
                 for node in nodes:
 
-                    win.add(" - [{}]: {}".format(type(node), node.name), prefix=self.out)
+                    win.add(" - [{}]: {}".format(type(node), node.info.name), prefix=self.out)
 
                 win.add(self.sep, prefix=self.out)
 
-                return
+                return True
+
+            if keyword_find(mesg, ['stream']):
+
+                # We are dealing with stream, lets figure out if we need to enable or disable.
+
+                if self.chas.client:
+
+                    # We are working with a client, lets figure out what the user wants:
+
+                    if keyword_find(mesg, ['enable']):
+
+                        win.add("Enabling streaming!")
+
+                        self.chas.net.handlers[4].start()
+
+                        return True
+
+                    if keyword_find(mesg, ['disable']):
+
+                        win.add("Disabling streaming!")
+
+                        self.chas.net.handlers[4].stop()
+
+                        return True
+
+                    # Just report the status
+
+                    win.add("Streaming is: {}!".format("Enabled" if self.chas.net.handlers[4].allow_stream else "Disabled"))
+
+                    return True
+
+                # We are working with a server:
+
+                enabled = self.chas.sound.search_type(NetModule)
+
+                if keyword_find(mesg, ['enable']):
+
+                    # Check to make sure we are already enabled:
+
+                    if enabled:
+
+                        # Present, lets return
+
+                        win.add("Streaming is already enabled!")
+
+                        return True
+
+                    # Otherwise, lets enable it:
+
+                    win.add("Enabled streaming!")
+
+                    self.chas.sound.add_output(NetModule())
+
+                    return True
+
+                if keyword_find(mesg, ['disable']):
+
+                    # Check to make sure we are already enabled:
+
+                    if enabled:
+
+                        # Disable the module:
+
+                        self.chas.sound.remove_type(NetModule)
+
+                        win.add("Disabled streaming!")
+
+                        return True
+
+                    win.add("Streaming is already enabled!")
+
+                    return True
+
+                # Otherwise, report the status:
+
+                win.add("Streaming is: {}!".format("Enabled" if enabled else "Disabled"))
+
+                return True
 
         if 'help ' == string_clean(mesg):
 

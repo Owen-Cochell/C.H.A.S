@@ -65,7 +65,7 @@ class SocketServer:
         self.log.debug(f"Accepted connection from: {addr}")
 
         conn.setblocking(False)
-        message = CHASocket(self.sel, conn, addr)
+        message = CHASocket(self.sel, conn, addr, self.log)
         self.sel.register(conn, selectors.EVENT_READ, data=message)
 
     def _ss_listener(self):
@@ -117,7 +117,7 @@ class SocketServer:
         Socket Server writing thread
         """
 
-        while True:
+        while self.running:
 
             # Pull a request from the queue:
 
@@ -210,6 +210,10 @@ class SocketServer:
 
         self.log.debug("Stopping handler threads...")
 
+        for hand in self.handlers:
+
+            hand.stop()
+
         self.pool.shutdown()
 
     def parse_handlers(self):
@@ -270,35 +274,53 @@ class SocketServer:
         # SS handel method, find suitable handler and run it
         # Ran inside of a ThreadPoolExecutor
 
-        sock = payload['sock']
-        data = payload['data']
+        try:
 
-        hand = self.handlers[data['id']]
-        uuid = data['uuid']
-        req_id = data['id']
-        content = data['content']
+            sock = payload['sock']
+            data = payload['data']
 
-        if uuid is None and sock.device_uuid is None and req_id == 1:
+            if data['id'] > len(self.handlers) or data['id'] < 0:
 
-            # Device is attempting to authenticate
+                # No handler found, lets exit:
 
-            hand.handel_server(sock, content)
+                self.log.warning("No handler found for ID [{}]! Dropping packet...".format(data['id']))
 
-            return
+                return
 
-        # Getting device here:
+            hand = self.handlers[data['id']]
+            uuid = data['uuid']
+            req_id = data['id']
+            content = data['content']
 
-        device = self.devices.get_by_uuid(uuid)
+            self.log.info("Received {} from {} ".format(data, sock))
 
-        if device is None or sock.device_uuid != device.uuid:
+            if uuid is None and sock.device_uuid is None and req_id == 1:
 
-            # Device is not authenticated,
-            # OR an authentication error has occurred.
-            # Ignoring packet.
+                # Device is attempting to authenticate
 
-            return
+                hand.handel_server(sock, content)
 
-        hand.handel_server(device, content)
+                return
+
+            # Getting device here:
+
+            device = self.devices.get_by_uuid(uuid)
+
+            if device is None or sock.device_uuid != device.uuid:
+
+                # Device is not authenticated,
+                # OR an authentication error has occurred.
+                # Ignoring packet.
+
+                self.log.warning("Device not authenticated! Dropping packet...")
+
+                return
+
+            hand.handel_server(device, content)
+
+        except Exception as e:
+
+            self.log.warning("Error occurred during handler thread: {}".format(e))
 
 
 class SocketClient:
@@ -339,12 +361,21 @@ class SocketClient:
 
         self.running = False
 
+        # Iterate over handlers to stop them:
+
+        for hand in self.handlers:
+
+            # Stop the handler:
+
+            hand.stop()
+
         self.thread.join()
 
     def _start_connection(self):
 
         addr = (self.host, self.port)
-        # print(f"Starting connection to {addr}")
+
+        self.log.debug("Establishing connection to CHAS server {}:{}".format(addr[0], addr[1]))
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -356,7 +387,7 @@ class SocketClient:
         self.sock.setblocking(False)
 
         events = selectors.EVENT_READ
-        message = CHASocket(self.sel, self.sock, addr)
+        message = CHASocket(self.sel, self.sock, addr, self.log)
         self.sel.register(self.sock, events, data=message)
 
         message.write({'id': 1, 'uuid': None, 'content': None})
@@ -401,7 +432,7 @@ class SocketClient:
 
         self.handlers.sort(key=self._get_id)
 
-        print(self.handlers)
+        self.log.debug("Loaded [{}] network handlers!".format(len(self.handlers)))
 
         return
 
@@ -409,11 +440,9 @@ class SocketClient:
 
         self._start_connection()
 
-        print("In socket server event loop...")
-
         while self.running:
 
-            events = self.sel.select(timeout=1)
+            events = self.sel.select(timeout=5)
 
             for key, mask in events:
 
@@ -425,13 +454,19 @@ class SocketClient:
 
                         data = message.read()
 
-                        #print(message)
+                        if data is None:
+
+                            continue
+
                         self.handler(data, message)
 
                 except Exception as e:
 
-                    print(f"An error occurred: {e}")
+                    self.log.error("Error during event loop: {}!".format(e))
+                    self.log.error("Removing socket [{}:{}]".format(self.host, self.port))
                     message.close()
+
+                    raise e
 
             if not self.sel.get_map():
 
@@ -439,20 +474,25 @@ class SocketClient:
 
     def handler(self, data, sock):
 
-        uuid = data['uuid']
-        req_id = data['id']
-        content = data['content']
-        hand = self.handlers[req_id]
-        server = self.chas.server
+        try:
 
-        if req_id == 1:
+            req_id = data['id']
+            content = data['content']
+            hand = self.handlers[req_id]
+            server = self.chas.server
 
-            # Authenticating...
+            self.log.info("Received data {}".format(data))
 
-            print("Sending to auth handler:")
+            if req_id == 1:
 
-            hand.handel_client(sock, content)
+                # Authenticating...
 
-            return
+                hand.handle_client(sock, content)
 
-        hand.handel_client(server, content)
+                return
+
+            hand.handle_client(server, content)
+
+        except Exception as e:
+
+            self.log.warn("Error occurred during handle method: {}".format(e))

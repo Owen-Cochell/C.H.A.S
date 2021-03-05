@@ -23,31 +23,27 @@ class AuthHandel(IDHandle):
 
         # Getting socket address information
 
-        print("In auth handler")
-
         addr = sock.addr
 
         # Creating device object
 
-        print("Creating device object:")
+        self.log.debug("Authenticating client {}:{} ...".format(addr[0], addr[1]))
 
         dev = Device(self.chas, 'undefined', addr[0], addr[1], sock)
         
         # Registering device with CHAS device management system
 
-        print("Registering device:")
-
         self.chas.devices.register(dev)
 
         # Sending back confirmation and UUID
 
-        print("Sending authentication information...")
+        self.log.debug("Sending authentication information ...")
 
         dev.send({'auth': True, 'uuid': str(dev.uuid)}, 1)
 
         return
 
-    def handel_client(self, sock, data):
+    def handle_client(self, sock, data):
 
         # Checking if auth was successful...
 
@@ -56,6 +52,8 @@ class AuthHandel(IDHandle):
             # Auth was successful!
 
             # Creating new server object...
+
+            self.log.debug("Successfully authenticated with the server!")
 
             addr = sock.addr
 

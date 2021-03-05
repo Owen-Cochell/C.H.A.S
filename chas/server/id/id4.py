@@ -14,12 +14,20 @@ class AudioStream(IDHandle):
                                           4)
 
         self.stream = None  # Instance of our stream
+        self.contol = None  # OutputControl instance
+        self.allow_stream = True  # Weather we should handle and accept streaming data
         self.chunk = 0  # Chunksize of data to read
 
-    def handel_client(self, dev, data):
+    def handle_client(self, dev, data):
 
         id_num = data['id']
         contents = data['data']
+
+        if self.allow_stream:
+
+            # We are not allowing streaming, lets drop the packet
+
+            return
 
         if id_num == 0:
 
@@ -41,6 +49,18 @@ class AudioStream(IDHandle):
 
             self._stop_stream()
 
+    def start(self):
+
+        """
+        Called when we re added to the networking component.
+
+        We simply set out 'allow_streams' value to True, so we can accept streaming information.
+
+        This is also called by CoreTools when client streaming is enabled.
+        """
+
+        self.allow_stream = True
+
     def stop(self):
 
         """
@@ -49,11 +69,17 @@ class AudioStream(IDHandle):
         This might occur if the instance does not want audio streaming enabled.
 
         We stop and remove the NetReader from the OutputHandler and quit.
+
+        This is also called by CoreTools when client streaming is disabled.
         """
+
+        self.allow_stream = False
 
         # Stop the NetReader:
 
-        self._stop_stream()
+        if self.stream is not None:
+
+            self._stop_stream()
 
     def _read_stream(self, data):
 
@@ -78,7 +104,9 @@ class AudioStream(IDHandle):
 
         self.log.debug("Starting audio stream...")
 
-        self.stream = self.chas.sound.bind_synth(NetReader())
+        self.stream = NetReader()
+
+        self.control = self.chas.sound.bind_synth(self.stream)
 
     def _stop_stream(self):
 
@@ -86,4 +114,4 @@ class AudioStream(IDHandle):
 
         self.log.debug("Stopping audio stream...")
 
-        self.stream.stop()
+        self.control.stop()

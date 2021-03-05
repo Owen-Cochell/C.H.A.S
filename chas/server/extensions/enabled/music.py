@@ -3,8 +3,8 @@
 from chaslib.extension import BaseExtension
 from chaslib.resptools import keyword_find, key_sta_find
 from random import shuffle, randint
-from chaslib.soundtools import WavePlayer
-import pyaudio
+from chaslib.sound.input import WaveReader
+
 import os
 import json
 import threading
@@ -25,11 +25,9 @@ class MusicPlayer(BaseExtension):
     def __init__(self):
 
         super(MusicPlayer, self).__init__('Music Player', 'A simple Music Player')
-        self.chunk = 1024  # Chunksize
-        self.p = pyaudio.PyAudio()  # Pyaudio instance
-        self.stream = None  # Pyaudio stream
+
         self.wf = None  # Variable containing Wavefile
-        self.wav = None  # Wave player instance
+        self.out = None  # OutputControl instance
         self.media = self.chas.settings.media_dir  # Uses Default Media directory upon startup
         self.cache = []  # To be used to cache songs for quick playing
         self.playing = False  # Boolean determining if we are playing a song
@@ -64,7 +62,6 @@ class MusicPlayer(BaseExtension):
                 index = mesg.index(' by ')
 
                 title = mesg[play_index+5:index]
-                print("Title: {}".format(title))
                 song_dir = mesg[index+4:]
 
                 out = self.search_song(title, foulder=song_dir)
@@ -77,9 +74,11 @@ class MusicPlayer(BaseExtension):
 
                     return False
 
-                self.start_play()
+                self.play()
 
-                return True, f"Playing: {title}"
+                win.add("Playing '{}'".format(title))
+
+                return True
 
             if keyword_find(mesg, 'in', start=play_index):
 
@@ -153,7 +152,7 @@ class MusicPlayer(BaseExtension):
             if self.search_song(title):
 
                 # Found Song
-                self.start_play()
+                self.play()
 
                 win.add("Playing {}".format(title))
 
@@ -178,7 +177,7 @@ class MusicPlayer(BaseExtension):
 
                 self.playlist_incriment(1)
 
-                self.wav.stop()
+                self.out.stop()
 
                 win.add("Playing next song")
 
@@ -352,26 +351,13 @@ class MusicPlayer(BaseExtension):
         # Function for Playing audio
         # Must be executed in thread
 
-        self.wav = WavePlayer(
+        # Add the WaveReader node:
 
-            self.chas,
-            path=self.song_path,
-            net=True
-
-        )
-
-        self.wav.start()
+        self.out = self.chas.sound.bind_synth(WaveReader(self.song_path))
+        self.out.start()
 
         self.playing = True
 
-        return
-
-    def start_play(self):
-
-        # Function for starting play thread
-
-        self.thread = threading.Thread(target=self.play, daemon=True)
-        self.thread.start()
         return
 
     def player(self):
@@ -436,12 +422,12 @@ class MusicPlayer(BaseExtension):
 
             # Invalid index!
 
-            print("Invalid index!")
-
             return
 
         self.playlist_num = self.playlist_num + num
-        self.wav.stop()
+
+        self.out.stop()
+
         return
 
     def playlist_shuffle(self):
@@ -461,7 +447,7 @@ class MusicPlayer(BaseExtension):
 
         if self.playing:
 
-            self.wav.stop()
+            self.out.stop()
 
         else:
 
@@ -474,7 +460,8 @@ class MusicPlayer(BaseExtension):
         # Chooses random song from playlist:
 
         self.playlist_num = randint(0, len(self.playlist) - 1)
-        self.wav.stop()
+
+        self.out.stop()
 
         return
 
@@ -515,11 +502,8 @@ class MusicPlayer(BaseExtension):
         self.playing = False
         self.playlist = []
 
-        self.wav.stop()
-
-        self.wav = None
+        self.out.stop()
 
     def stop(self):
 
-        self.wav.stop()
-        self.p.terminate()
+        self.out.stop()

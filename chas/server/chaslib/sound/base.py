@@ -17,6 +17,7 @@ but you could script synth output using certain features located in OutputContro
 """
 
 import threading
+import multiprocessing
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -225,6 +226,7 @@ class OutputHandler:
         self.rate = rate  # Rate to output audio
         self.futures = []
         self.thread = []
+        self.producer_process = None  # Producer thread
 
         self.run = False  # Value determining if we are running
         self._pause = threading.Event()  # Event object determining if we are paused
@@ -311,7 +313,7 @@ class OutputHandler:
         Starts the OutputHandler.
 
         This entails starting the output modules we have added,
-        and creating a barrier to ensure all modules are synchronised in getting their values.
+        and creating a barrier to ensure all modules are synchronized in getting their values.
 
         We will start to consume audio information until we are stopped or paused.
         """
@@ -319,10 +321,6 @@ class OutputHandler:
         # Set the run value:
 
         self.run = True
-
-        # Create the barrier:
-
-        self.barrier = threading.Barrier(len(self._output))
 
         # Start all the modules in our collection:
 
@@ -411,7 +409,7 @@ class OutputHandler:
 
         # Iterate until we ge something valid:
 
-        while True:
+        while self.run:
 
             # Pause if necessary:
 
@@ -431,9 +429,65 @@ class OutputHandler:
 
                 # Add the input to the module:
 
+                if mod.special:
+
+                    # Ignore and continue:
+
+                    continue
+
                 mod.add_input(inp)
 
-            break
+            return inp
+
+    def remove_type(self, out_type):
+
+        """
+        Removes an output module based upon the given type.
+
+        If we encounter this type, then we remove it.
+
+        :param out_type: Type of module to remove
+        """
+
+        for mod in self._output:
+
+            # Check if the module is valid:
+
+            if type(mod) == out_type:
+
+                # Remove this module:
+
+                self._stop_module(mod)
+
+                # Remove the module:
+
+                self._output.remove(mod)
+
+    def search_type(self, out_type):
+        """
+        Searches the output modules for a given type.
+
+        If this type is encountered, then we return True.
+
+        :param out_type: Type to search for
+        :type out_type: type
+        :return: True for present, False for not
+        :rtype: bool
+        """
+
+        # Iterate over the output modules:
+
+        for mod in self._output:
+
+            if type(mod) == out_type:
+
+                # Found a match, return True
+
+                return True
+
+        # No match, return False
+
+        return False
 
     def _add_synth(self, synth):
 
@@ -491,11 +545,15 @@ class OutputHandler:
 
         # Add it to the collection:
 
-        #self._work.submit(mod.run)
+        self._work.submit(mod.run)
+
+        '''
 
         thread = threading.Thread(target=mod.run)
         thread.start()
         self.thread.append(thread)
+
+        '''
 
     def _stop_module(self, mod):
 

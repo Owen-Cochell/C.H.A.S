@@ -1,0 +1,21 @@
++==========================================================+
+
+Keeping track of all threads in use.
+Are we using too many?
+
+Keep track of all threads in use by each component:
+
+SocketServer:
+    - Listen thread
+    - Write thread
+    - Arbitrary handler threads
+
+SocketClient:
+    - Listen thread
+    - Arbitrary handler thread
+
+Listener:
+    - Background listen thread
+
+OutputHandler:
+    - Arbitrary module threads

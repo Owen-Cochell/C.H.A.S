@@ -1,6 +1,7 @@
 # A class for handling devices
 
 import uuid
+import queue
 
 # TODO: Add ping, test for socketserver discrepancies, ...
 
@@ -26,7 +27,9 @@ class Device:
                 'uuid': self.uuid,
                 'content': content}
 
-        self.chas.socket_server.write(data, self.uuid)
+        #self.chas.net.write(data, self.uuid)
+
+        self.sock.write(data)
 
     def get(self, content, id_num, encoding='utf-8'):
 
@@ -44,7 +47,7 @@ class Device:
                 'uuid': self.uuid,
                 'content': inner_data}
 
-        self.chas.socket_server.write(data)
+        self.chas.net.write(data)
 
         while True:
 

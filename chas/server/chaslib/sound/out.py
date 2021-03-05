@@ -30,7 +30,7 @@ from base64 import b64encode
 
 from chaslib.sound.convert import BaseConvert, NullConvert, Float32, Int16
 from chaslib.sound.utils import amp_clamp
-from chaslib.misctools import get_chas
+from chaslib.misctools import get_chas, get_logger
 
 
 class BaseOutput(object):
@@ -114,7 +114,7 @@ class BaseOutput(object):
         This returns one sample of audio, the size of which can be determined by 
         We support the timeout feature, which is the amount of time to wait for values to become available.
 
-        Due to threading and our method of synchronisation, we will ALWAYS block.
+        Due to threading and our method of synchronization, we will ALWAYS block.
 
         You can optionally disable conversion and mixing by using the 'raw' parameter.
         If we are working with stereo, then a tuple of floats will be returned,
@@ -133,24 +133,19 @@ class BaseOutput(object):
         :type raw: bool
         """
 
-        # Check if we should generate:
-
         if self.special:
 
-            self.out.gen_value()
+            # Generate a new frame:
 
-        # Get input from the queue:
+            inp = self.out.gen_value()
 
-        inp = self.queue.get(timeout=timeout)
+        else:
+
+            # Get input from the queue:
+
+            inp = self.queue.get(timeout=timeout)
 
         # We are done processing!
-
-        if inp is None:
-
-            # We have None! Return
-
-            return None
-
         # Check if we should convert:
 
         if not raw:
@@ -242,12 +237,6 @@ class BaseOutput(object):
             # Get input and add it to final:
 
             inp = self.get_sample(timeout=timeout, raw=raw)
-
-            if inp is None:
-
-                # Return None:
-
-                return None
 
             # Add input to list:
 
@@ -537,7 +526,6 @@ class PyAudioModule(BaseOutput):
 
             # Could not import PyAudio! Raise an exception of our own
 
-
             raise ModuleNotFoundError("We require PyAudio to be installed!")
 
         self.device = device  # Device to output to
@@ -586,7 +574,7 @@ class PyAudioModule(BaseOutput):
 
             # Get a certain number of frames:
 
-            frames = self.get_added_samples(self.frames_per_buffer + 1000)
+            frames = self.get_added_samples(self.frames_per_buffer)
 
             # Send them to PyAudio
 
@@ -619,6 +607,7 @@ class NetModule(BaseOutput):
         super().__init__()
 
         self.chas = get_chas()  # Get our CHAS instance
+        self.log = get_logger("NET_STREAM")
 
         # Check if we are a server:
 
@@ -630,7 +619,7 @@ class NetModule(BaseOutput):
 
         # Load an int16 converter:
 
-        self.add_converter(Int16())
+        self.add_converter(NullConvert())
 
     def _gen_starter_payload(self):
 
@@ -655,11 +644,11 @@ class NetModule(BaseOutput):
         :rtype: dict
         """
 
-        b64_bytes = b64encode(data)
+        #b64_bytes = b64encode(data)
 
-        b64_string = b64_bytes.decode('utf-8')
+        #b64_string = b64_bytes.decode('utf-8')
 
-        return {'id': 1, 'data': b64_string}
+        return {'id': 1, 'data': data}
 
     def _gen_stop_payload(self):
 
@@ -719,4 +708,12 @@ class NetModule(BaseOutput):
 
             # Get and send a frame to the clients:
 
-            self._write(self._gen_data_payload(self.get_sample()))
+            samp = self.get_samples(1024)
+
+            if samp is None:
+
+                # We are done, lets break
+
+                break
+
+            self._write(self._gen_data_payload(samp))

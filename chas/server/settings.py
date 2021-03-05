@@ -24,7 +24,7 @@ class Settings:
 
         self.log_file = 'log_chas.txt'  # Path to logging file
         self.log_file_level = DEBUG
-        self.log_terminal_level = INFO
+        self.log_terminal_level = DEBUG
 
         self.host = '127.0.0.1'
         self.port = 65432

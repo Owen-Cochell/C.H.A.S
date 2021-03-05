@@ -49,7 +49,7 @@ class IDHandle(object):
 
         pass
 
-    def handle_server(self, dev, data):
+    def handle_client(self, dev, data):
         
         """
         Handle method for client operations - The socket client will call this function.

@@ -1,1 +1,31 @@
+# Exclude .idea directorys
+**/.idea/
+
+# Exclude __pycache__ directories
+
+**/__pycache___/
+
+# Exclude .pyc files
+
+*.pyc
+
+# Exclude .vscode directories
+
+**/.vscode/
+
+# Exclude media directory:
+
+**/media/
+
+# Exclude virtual environments
+
+**/venv/
+venv
+/venv/
+
+# Exclude random log files
+
+**/log_chas.txt
+**/log.txt
+chas/server/log_chas.txt
 chas/server/log_chas.txt

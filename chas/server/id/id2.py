@@ -1,3 +1,4 @@
+import uuid
 
 from id.idhandle import IDHandle
 from chaslib.resptools import key_search
@@ -15,7 +16,7 @@ class DummyWindow:
 
         self.output = []  # Output of window
 
-    def add(self, mesg, output='OUTPUT'):
+    def add(self, mesg, prefix='OUTPUT'):
 
         # Add message to the internal collection
 
@@ -45,7 +46,7 @@ class VoiceHandel(IDHandle):
 
         return {"success": val, "resp": voice}
 
-    def handel(self, dev, data):
+    def handel_server(self, dev, data):
 
         # Handel Method for voice actions  
 
@@ -54,19 +55,11 @@ class VoiceHandel(IDHandle):
 
         # Creating dummy window
 
-        print("Creating dummy window:")
-
         dummy = DummyWindow()
-
-        print("Sending input through handlers")
 
         val = self.chas.extensions.handel(voice_str, talk, dummy)
 
-        print("Generating send data:")
-
         data = self._gen_response(dummy.collect(), val)
-
-        print("Sending data:")
 
         dev.send(data, 2)
         

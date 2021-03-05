@@ -59,11 +59,11 @@ class SpecialHandel(IDHandle):
             
             # Simple handel bypass
 
-            handel = self.chas.socket_server.handlers[content_id]
+            handel = self.chas.net.handlers[content_id]
 
             dd = self._gen_dummy_device(device)
 
-            handel.handel(dd, content)
+            handel.handel_server(dd, content)
 
             response = self._gen_request(dd, content_uuid, content_id, content_type)
 

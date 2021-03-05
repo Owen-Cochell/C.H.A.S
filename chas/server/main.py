@@ -91,6 +91,17 @@ class CHASBase:
         self.log = get_logger("CORE")
         self.log.info("Starting CHAS components...")
 
+        # Starting audio service:
+
+        self.log.info("Starting audio engine...")
+
+        pyaud = PyAudioModule()
+        pyaud.special = True
+
+        self.sound.add_output(pyaud)
+
+        self.sound.start()
+
         # Parsing and loading extensions
 
         self.log.info("Starting Extension Service...")
@@ -150,6 +161,12 @@ class CHASBase:
         self.log.info("Stopping and disabling personality service...")
 
         self.person.stop()
+
+        # Stopping audio service:
+
+        self.log.info("Stopping audio engine...")
+
+        self.sound.stop()
 
         # Disabling ChatWindow:
 
@@ -248,6 +265,20 @@ class CHASBase:
                 # Extension handled input, continue:
 
                 continue
+
+            if self.client:
+
+                # Check remote, and see if their is a response
+
+                data = self.server.get({"voice": inp, "talk": False}, 2)
+
+                if data["success"]:
+                
+                    # Server was able to handel input
+            
+                    self.chat.add(data['resp'], output="REMOTE")
+                
+                    continue
 
             # Send input to personality:
 
