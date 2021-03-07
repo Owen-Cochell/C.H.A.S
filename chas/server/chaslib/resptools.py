@@ -378,7 +378,7 @@ class Personalities:
 
         self.select(self._core.name)
 
-        # Getting personalises from directory
+        # Getting personalities from directory
 
         final = []
         val = self._parse_directory([self.chas.settings.personality_dir], final)

@@ -207,7 +207,7 @@ class CHASBase:
 
                 # Extensions unable to handle input, send input to personality
 
-                self.speak.speak("I am unable to process your input at this time")
+                self.person.handel(val, False, self.chat)
 
     def main(self):
 

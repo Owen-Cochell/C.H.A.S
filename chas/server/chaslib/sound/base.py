@@ -63,6 +63,9 @@ class OutputControl(BaseModule):
         self.time_remove = 0  # Time to remove ourselves. If 0, then we don't keep track
         self.item_written = 0  # Number of items to write. If 0, then we don't keep track
 
+        self.wait = threading.Event()
+        self.wait.set()
+
     def start(self):
 
         """
@@ -70,6 +73,10 @@ class OutputControl(BaseModule):
 
         '__iter__()' does all the dirty work!
         """
+
+        # Clear our event:
+
+        self.wait.clear()
 
         return iter(self)
 
@@ -91,6 +98,22 @@ class OutputControl(BaseModule):
         # Stop the chain:
 
         self.input.stop_modules()
+
+        # Setting our event:
+
+        self.wait.clear()
+
+    def join(self):
+
+        """
+        Waits until the SynthChain has stopped.
+
+        We use a threading Event object to handle te blocking.
+        """
+
+        # Wait on the threading even:
+
+        self.wait.wait()
 
     def get_next(self):
 

@@ -11,6 +11,8 @@ from base64 import b64encode
 import wave
 from math import ceil
 
+from chaslib.sound.input import WaveReader
+from chaslib.misctools import get_logger
 
 class Listener:
 
@@ -34,6 +36,8 @@ class Listener:
         self.pause = Event()  # Event determining if we are paused(True means we are not paused
         self.sphinx = True  # Boolean determining if we recognize with the offline engine
 
+        self.log = get_logger()
+
         self.pause.set()
         self.wake.clear()
 
@@ -45,6 +49,8 @@ class Listener:
         """
 
         # Waiting for instance to be unpaused
+
+        self.log.debug("Listening for user input...")
 
         val = self.pause.wait(timeout=timeout)
 
@@ -66,7 +72,13 @@ class Listener:
 
             # PLaying notification sound
 
-            WavePlayer(self.chas, path=os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')).start()
+            #WavePlayer(self.chas, path=os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')).start()
+
+            # Add a WaveReader to OutputHandler:
+
+            player = self.chas.sound.bind_synth(WaveReader(os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')))
+            player.start()
+            player.join()
 
             # Listening for voice
 
@@ -76,9 +88,13 @@ class Listener:
 
             # Recognize with the offline pocketsphinx engine
 
+            self.log.debug("Recognizing via sphinx...")
+
             value = self._recognize_sphinx(audio)
 
         else:
+
+            self.log.debug("Recognizing via google...")
 
             value = self._recognize_google(audio)
 
@@ -92,8 +108,9 @@ class Listener:
 
         """
         Continuously listening until wake word is heard
-        :return:
         """
+
+        self.log.debug("Recognizing in the background...")
 
         # Checking for pause status:
 
@@ -123,7 +140,6 @@ class Listener:
         Backend function for handling continuous callbacks
         :param rec: Recognizer instance(Unneeded, discarded)
         :param audio: Audio instance to recognize
-        :return:
         """
 
         # Checking if we are paused:
@@ -140,15 +156,19 @@ class Listener:
 
         self.pause.wait()
 
-        # Recognising audio with Pocketshpinx
+        # Recognizing audio with Pocketshpinx
 
         try:
 
             word = self._recognize_sphinx(audio)
 
-        except:
+            self.log.debug("Recognized word: {}".format(word))
+
+        except Exception as e:
 
             # Failed to recognize, return from callback
+
+            self.log.debug("Failed to recognize: {}".format(e))
 
             return
 
@@ -159,6 +179,8 @@ class Listener:
             # Found our wake word:
 
             self.wake.set()
+
+            self.log.debug("Found our wakeword: {}".format(self.word))
 
             return
 
