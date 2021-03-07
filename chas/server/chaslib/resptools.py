@@ -504,6 +504,10 @@ class Personalities:
 
         self.log.debug("Loading personality: [{}]...".format(person.name))
 
+        # Add the CHAS instance to it:
+
+        person.chas = self.chas
+
         # Load the personality:
 
         try:
@@ -822,6 +826,7 @@ class CORE(BasePersonality):
         super(CORE, self).__init__('CORE', 'CHAS Core BasePersonality')
         self.last = None  # Last entered input
         self.out = "CORE:PERSONALITY"  # Output value
+        self.chas = None  # CHAS Instance
 
     def handel(self, mesg, talk, win):
 

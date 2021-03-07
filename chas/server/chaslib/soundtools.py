@@ -72,13 +72,7 @@ class Listener:
 
             # PLaying notification sound
 
-            #WavePlayer(self.chas, path=os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')).start()
-
-            # Add a WaveReader to OutputHandler:
-
-            player = self.chas.sound.bind_synth(WaveReader(os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')))
-            player.start()
-            player.join()
+            WavePlayer(self.chas, path=os.path.join(self.chas.settings.media_dir, 'sounds/listen.wav')).start()
 
             # Listening for voice
 
@@ -141,16 +135,6 @@ class Listener:
         :param rec: Recognizer instance(Unneeded, discarded)
         :param audio: Audio instance to recognize
         """
-
-        # Checking if we are paused:
-
-        if not self.pause.isSet():
-
-            # Paused, waiting and ignoring audio data
-
-            self.pause.wait()
-
-            return
 
         # Waiting if we are paused
 
