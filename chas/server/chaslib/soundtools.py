@@ -36,7 +36,7 @@ class Listener:
         self.pause = Event()  # Event determining if we are paused(True means we are not paused
         self.sphinx = True  # Boolean determining if we recognize with the offline engine
 
-        self.log = get_logger()
+        self.log = get_logger("SPEECH")
 
         self.pause.set()
         self.wake.clear()
@@ -675,6 +675,8 @@ class Speaker:
         self.voices = []
         self.location = None
 
+        self.log = get_logger("SYNTH")
+
     def get_voices(self):
 
         if self.location is None:
@@ -785,10 +787,8 @@ class Speaker:
 
         if rc != 0:
 
-            print("An error occurred:")
-            print(rc)
-            print(error)
-            empty = input("Press enter to continue...")
-            return
+            self.log.error("Error occurred during voice synthesis!")
+            self.log.error("Return Code: {}".format(rc))
+            self.log.error("STDERROR: {}".format(error))
 
         return

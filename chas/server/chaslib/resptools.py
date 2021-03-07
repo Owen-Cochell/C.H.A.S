@@ -861,6 +861,15 @@ class CORE(BasePersonality):
 
             return
 
+        if keyword_find(mesg, 'say'):
+
+            # Send message to the voice synth
+
+            text = mesg[mesg.index(" say ") + 5:]
+            self.chas.speak.speak(text)
+
+            return
+
         else:
 
             win.add("I don't understand.", prefix=self.out)
