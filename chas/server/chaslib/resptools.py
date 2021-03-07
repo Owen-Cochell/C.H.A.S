@@ -865,7 +865,7 @@ class CORE(BasePersonality):
 
             # Send message to the voice synth
 
-            text = mesg[mesg.index(" say ") + 5:]
+            text = mesg[mesg.index("say") + 4:]
             self.chas.speak.speak(text)
 
             return

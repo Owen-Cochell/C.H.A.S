@@ -93,8 +93,6 @@ class OutputControl(BaseModule):
         self.time_remove = 0
         self.item_written = 0
 
-        self.log.info("Stopping audio node")
-
         # Stop the chain:
 
         self.input.stop_modules()
